@@ -5,6 +5,12 @@
  * Every field here is shaped exactly the way the real API response
  * is expected to look (see BRD section 6.2 "API Contract").
  *
+ * This is also the app's starting sample invoice — an Oman-style Tax
+ * Invoice (VATIN, OMR, "for <company> / Authorised Signatory"). Every
+ * field the layman sees on the canvas (company, buyer, invoice details,
+ * line items) is editable straight from the page — this file only sets
+ * the values shown the first time the app opens.
+ *
  * WHEN THE REAL API IS READY:
  *   1. Open src/data/apiClient.js
  *   2. Flip USE_STATIC_DATA to false and set API_BASE_URL
@@ -15,64 +21,79 @@
 
 export const mockCompany = {
   id: 'company-001',
-  name: 'Northwind Traders Pvt. Ltd.',
-  addressLine1: '221B Commerce Street',
-  addressLine2: 'Andheri East, Mumbai, MH 400069',
-  email: 'billing@northwindtraders.com',
-  phone: '+91 98765 43210',
-  website: 'www.northwindtraders.com',
-  taxId: 'GSTIN: 27ABCDE1234F1Z5',
+  name: 'Ali & Co',
+  addressLine1: 'West Gate, High Street',
+  addressLine2: 'Muscat',
+  email: '',
+  phone: '',
+  website: '',
+  taxId: 'VATIN : AA1234567890',
   logoUrl: null, // layman uploads this via the Image Upload panel
 };
 
 export const mockClient = {
   id: 'client-001',
-  name: 'Bluepeak Retail Group',
-  billingAddress: '48 Harbor View Road, Pune, MH 411001',
-  shippingAddress: '48 Harbor View Road, Pune, MH 411001',
-  email: 'accounts@bluepeakretail.com',
-  phone: '+91 91234 56789',
+  name: 'Max Enterprises',
+  billingAddress: 'Centre Point Mall, New Street, Muscat',
+  shippingAddress: 'Centre Point Mall, New Street, Muscat',
+  email: '',
+  phone: '',
+  country: 'Sultanate of Oman',
+  taxId: 'AS0987654321',
+  placeOfSupply: 'Sultanate of Oman',
 };
 
 export const mockInvoiceMeta = {
-  invoiceNumber: 'INV-2026-0142',
-  invoiceDate: '2026-08-02',
-  dueDate: '2026-08-16',
-  poNumber: 'PO-7734',
-  paymentTerms: 'Net 14 days',
-  currency: 'INR',
-  currencySymbol: '₹',
+  invoiceNumber: '1',
+  invoiceDate: '11-Nov-21',
+  dueDate: '',
+  poNumber: '',
+  paymentTerms: '',
+  currency: 'OMR',
+  currencySymbol: '',
+  currencyDecimals: 3,
+  // Extra dispatch/reference fields shown on a Tally-style tax invoice header —
+  // all optional, blank ones simply render an empty value the layman can fill in.
+  deliveryNote: '',
+  modeOfPayment: '',
+  supplierRef: '',
+  otherReference: '',
+  buyersOrderNo: '',
+  buyersOrderDate: '',
+  despatchDocNo: '',
+  deliveryNoteDate: '',
+  despatchedThrough: '',
+  destination: '',
+  termsOfDelivery: '',
 };
 
 /**
  * Products / line items — this is what the "layman" checks on/off
  * inside the Product Table element and what drives the calculation
- * engine (see src/utils/calculations.js).
+ * engine (see src/utils/calculations.js). Quantity, rate, discount and
+ * tax are editable straight from the invoice table on the canvas.
  */
 export const mockProducts = [
-  { id: 'p1', sku: 'NW-1001', name: 'Wireless Barcode Scanner', description: 'Handheld 2D scanner, USB dock included', category: 'Hardware', qty: 4, unitPrice: 2450, discountPercent: 5, taxPercent: 18 },
-  { id: 'p2', sku: 'NW-1002', name: 'Thermal Receipt Printer', description: '80mm, USB + Bluetooth', category: 'Hardware', qty: 2, unitPrice: 5200, discountPercent: 0, taxPercent: 18 },
-  { id: 'p3', sku: 'NW-1003', name: 'POS Cash Drawer', description: '5-bill / 8-coin tray, RJ11', category: 'Hardware', qty: 2, unitPrice: 3100, discountPercent: 0, taxPercent: 18 },
-  { id: 'p4', sku: 'NW-1004', name: 'Label Roll (Pack of 10)', description: '40x25mm direct thermal labels', category: 'Consumables', qty: 10, unitPrice: 180, discountPercent: 10, taxPercent: 12 },
-  { id: 'p5', sku: 'NW-1005', name: 'Annual Support Plan', description: 'On-site service, 4 visits/year', category: 'Services', qty: 1, unitPrice: 12000, discountPercent: 0, taxPercent: 18 },
-  { id: 'p6', sku: 'NW-1006', name: 'Cash Register Ribbon', description: 'Pack of 5, purple ink', category: 'Consumables', qty: 6, unitPrice: 95, discountPercent: 0, taxPercent: 12 },
+  { id: 'p1', sku: '', name: 'Product', description: '', category: '', qty: 10, unit: 'Nos', unitPrice: 350, discountPercent: 0, taxPercent: 5 },
 ];
 
 export const mockSignatory = {
-  name: 'Aarav Mehta',
-  designation: 'Accounts Manager',
+  name: '',
+  designation: 'Authorised Signatory',
   stampUrl: null, // layman uploads this via the Signature/Stamp element
 };
 
 /** Column metadata the Product Table element uses to build its column toggles. */
 export const productColumnDefinitions = [
   { key: 'sku', label: 'SKU', defaultOn: false, numeric: false },
-  { key: 'name', label: 'Item', defaultOn: true, numeric: false },
-  { key: 'description', label: 'Description', defaultOn: true, numeric: false },
+  { key: 'name', label: 'Description of Goods', defaultOn: true, numeric: false },
+  { key: 'description', label: 'Description', defaultOn: false, numeric: false },
   { key: 'category', label: 'Category', defaultOn: false, numeric: false },
-  { key: 'qty', label: 'Qty', defaultOn: true, numeric: true },
-  { key: 'unitPrice', label: 'Unit Price', defaultOn: true, numeric: true },
+  { key: 'qty', label: 'Quantity', defaultOn: true, numeric: true },
+  { key: 'unitPrice', label: 'Rate', defaultOn: true, numeric: true },
+  { key: 'unit', label: 'Per', defaultOn: false, numeric: false },
   { key: 'discountPercent', label: 'Discount %', defaultOn: false, numeric: true },
-  { key: 'taxPercent', label: 'Tax %', defaultOn: false, numeric: true },
-  { key: 'lineTotal', label: 'Line Total', defaultOn: true, computed: true, numeric: true },
+  { key: 'taxPercent', label: 'VAT %', defaultOn: true, numeric: true },
+  { key: 'amount', label: 'Amount', defaultOn: true, computed: true, numeric: true },
+  { key: 'lineTotal', label: 'Line Total (incl. tax)', defaultOn: false, computed: true, numeric: true },
 ];

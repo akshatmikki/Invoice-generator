@@ -118,7 +118,7 @@ export function CanvasElement({ element }) {
       </div>
 
       <div className="canvas-el__body">
-        {renderElement(element, { onChange, isEditing: isSelected, apiData, elements })}
+        {renderElement(element, { onChange, apiData, elements })}
       </div>
 
       <div
@@ -133,9 +133,10 @@ export function CanvasElement({ element }) {
   );
 }
 
-function renderElement(element, { onChange, isEditing, apiData, elements }) {
+function renderElement(element, { onChange, apiData, elements }) {
   const { type, data, instanceId } = element;
-  const currencySymbol = apiData?.invoiceMeta?.currencySymbol || '₹';
+  const currencySymbol = apiData?.invoiceMeta?.currencySymbol ?? '₹';
+  const currencyDecimals = apiData?.invoiceMeta?.currencyDecimals ?? 2;
 
   switch (type) {
     case ELEMENT_TYPES.LOGO:
@@ -157,8 +158,7 @@ function renderElement(element, { onChange, isEditing, apiData, elements }) {
           data={data}
           products={apiData?.products || []}
           currencySymbol={currencySymbol}
-          onChange={onChange}
-          isEditing={isEditing}
+          currencyDecimals={currencyDecimals}
         />
       );
     case ELEMENT_TYPES.TOTALS: {
@@ -170,23 +170,14 @@ function renderElement(element, { onChange, isEditing, apiData, elements }) {
           products={apiData?.products || []}
           selectedProductIds={selectedProductIds}
           currencySymbol={currencySymbol}
-          onChange={onChange}
-          isEditing={isEditing}
+          currencyDecimals={currencyDecimals}
         />
       );
     }
     case ELEMENT_TYPES.TEXT_BLOCK:
-      return <TextBlockElement data={data} onChange={onChange} isEditing={isEditing} />;
+      return <TextBlockElement data={data} />;
     case ELEMENT_TYPES.CHART:
-      return (
-        <ChartElement
-          data={data}
-          products={apiData?.products || []}
-          currencySymbol={currencySymbol}
-          onChange={onChange}
-          isEditing={isEditing}
-        />
-      );
+      return <ChartElement data={data} products={apiData?.products || []} currencySymbol={currencySymbol} />;
     case ELEMENT_TYPES.DIVIDER:
       return <DividerElement />;
     default:

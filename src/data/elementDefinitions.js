@@ -74,7 +74,7 @@ export function createDefaultElementData(type) {
     case ELEMENT_TYPES.PRODUCT_TABLE:
       return {
         selectedProductIds: [],
-        visibleColumns: ['name', 'description', 'qty', 'unitPrice', 'lineTotal'],
+        visibleColumns: ['name', 'qty', 'unitPrice', 'unit', 'taxPercent', 'amount'],
       };
     case ELEMENT_TYPES.TOTALS:
       return { extraDiscountPercent: 0, extraTaxPercent: 0, showBreakdown: true, totalColumns: [] };
@@ -88,13 +88,13 @@ export function createDefaultElementData(type) {
         chartType: 'bar',
       };
     case ELEMENT_TYPES.TEXT_BLOCK:
-      return { text: 'Click to edit this text…', align: 'left', fontSize: 14, bold: false };
+      return { text: 'Click to edit this text…', align: 'left', styles: { text: { fontSize: 14 } } };
     case ELEMENT_TYPES.IMAGE:
-      return { imageData: null, caption: '' };
+      return { imageData: null, caption: '', styles: {} };
     case ELEMENT_TYPES.LOGO:
       return { imageData: null };
     case ELEMENT_TYPES.SIGNATURE:
-      return { imageData: null, label: 'Authorized Signatory' };
+      return { imageData: null, label: 'Authorized Signatory', styles: {} };
     case ELEMENT_TYPES.DIVIDER:
       return { style: 'solid' };
     default:

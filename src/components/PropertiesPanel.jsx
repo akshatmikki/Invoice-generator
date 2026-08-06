@@ -1,14 +1,37 @@
 import { useDesigner, findElement } from '../context/DesignerContext';
 import { ELEMENT_TYPES, findPaletteDefinition } from '../data/elementDefinitions';
+import {
+  CompanyInfoForm,
+  ClientInfoForm,
+  InvoiceMetaForm,
+  TextBlockForm,
+  CaptionForm,
+  ProductTableForm,
+  TotalsForm,
+  ChartForm,
+} from './PropertiesForms';
 
 export function PropertiesPanel() {
-  const { elements, selectedElementId, updateElementData, resizeElement, removeElement } = useDesigner();
+  const {
+    elements,
+    selectedElementId,
+    updateElementData,
+    resizeElement,
+    removeElement,
+    apiData,
+    updateCompany,
+    updateClient,
+    updateInvoiceMeta,
+    updateProduct,
+    addProduct,
+    removeProduct,
+  } = useDesigner();
 
   if (!selectedElementId) {
     return (
       <aside className="properties">
         <div className="properties__title">Properties</div>
-        <p className="properties__empty">Select an element on the page to edit its style, or drag its right edge to resize.</p>
+        <p className="properties__empty">Select an element on the page to customize it here, or drag its right edge to resize.</p>
       </aside>
     );
   }
@@ -17,6 +40,8 @@ export function PropertiesPanel() {
   if (!element) return null;
   const paletteDef = findPaletteDefinition(element.type);
   const onChange = (patch) => updateElementData(element.instanceId, patch);
+  const currencySymbol = apiData?.invoiceMeta?.currencySymbol ?? '₹';
+  const currencyDecimals = apiData?.invoiceMeta?.currencyDecimals ?? 2;
 
   return (
     <aside className="properties">
@@ -35,49 +60,36 @@ export function PropertiesPanel() {
           />
         </label>
         <p className="properties__hint">
-          You can also drag the handle on the element's right edge directly on the page, or grab its top
-          bar to move it anywhere — including next to another element in the same row.
+          Drag its top bar on the page to move it anywhere — including next to another element in the same row.
         </p>
       </div>
 
-      {element.type === ELEMENT_TYPES.TEXT_BLOCK && (
-        <div className="properties__controls">
-          <label>
-            Alignment
-            <select value={element.data.align} onChange={(e) => onChange({ align: e.target.value })}>
-              <option value="left">Left</option>
-              <option value="center">Center</option>
-              <option value="right">Right</option>
-            </select>
-          </label>
-          <label>
-            Font size
-            <input
-              type="range"
-              min="10"
-              max="28"
-              value={element.data.fontSize}
-              onChange={(e) => onChange({ fontSize: Number(e.target.value) })}
-            />
-          </label>
-          <label className="properties__checkbox">
-            <input type="checkbox" checked={element.data.bold} onChange={(e) => onChange({ bold: e.target.checked })} />
-            Bold
-          </label>
-        </div>
-      )}
-
-      {element.type === ELEMENT_TYPES.PRODUCT_TABLE && (
-        <p className="properties__hint">Tip: click the table on the page to pick products and columns.</p>
-      )}
-
-      {element.type === ELEMENT_TYPES.TOTALS && (
-        <p className="properties__hint">Tip: click the totals block on the page to set extra discount/tax.</p>
-      )}
-
-      {element.type === ELEMENT_TYPES.CHART && (
-        <p className="properties__hint">Tip: click the chart on the page to edit filters, grouping, measure and chart type.</p>
-      )}
+      <div className="properties__section">
+        {element.type === ELEMENT_TYPES.COMPANY_INFO && <CompanyInfoForm company={apiData?.company} onChange={updateCompany} />}
+        {element.type === ELEMENT_TYPES.CLIENT_INFO && <ClientInfoForm client={apiData?.client} onChange={updateClient} />}
+        {element.type === ELEMENT_TYPES.INVOICE_META && <InvoiceMetaForm invoiceMeta={apiData?.invoiceMeta} onChange={updateInvoiceMeta} />}
+        {element.type === ELEMENT_TYPES.TEXT_BLOCK && <TextBlockForm data={element.data} onChange={onChange} />}
+        {element.type === ELEMENT_TYPES.IMAGE && (
+          <CaptionForm label="Caption" value={element.data.caption} fieldKey="caption" data={element.data} onChange={onChange} />
+        )}
+        {element.type === ELEMENT_TYPES.SIGNATURE && (
+          <CaptionForm label="Label" value={element.data.label} fieldKey="label" data={element.data} onChange={onChange} />
+        )}
+        {element.type === ELEMENT_TYPES.PRODUCT_TABLE && (
+          <ProductTableForm
+            elementData={element.data}
+            onChange={onChange}
+            products={apiData?.products || []}
+            currencySymbol={currencySymbol}
+            currencyDecimals={currencyDecimals}
+            onUpdateProduct={updateProduct}
+            onAddProduct={addProduct}
+            onRemoveProduct={removeProduct}
+          />
+        )}
+        {element.type === ELEMENT_TYPES.TOTALS && <TotalsForm data={element.data} onChange={onChange} />}
+        {element.type === ELEMENT_TYPES.CHART && <ChartForm data={element.data} onChange={onChange} />}
+      </div>
 
       <button className="properties__delete" onClick={() => removeElement(element.instanceId)}>
         Delete this element

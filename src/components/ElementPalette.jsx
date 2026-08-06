@@ -55,8 +55,8 @@ function DataTab() {
     <>
       <p className="palette__subtitle">
         This is the live JSON data currently powering your invoice — static in Phase 1, and it will come
-        straight from the .NET API in Phase 2 with no other changes needed. It's read-only here; use the
-        elements on the Elements tab to place it on the page.
+        straight from the .NET API in Phase 2 with no other changes needed. It updates as you edit fields
+        on the page; this panel is just a read-only preview of the current values.
       </p>
       <JsonBlock title="company" value={apiData.company} />
       <JsonBlock title="client" value={apiData.client} />

@@ -2,6 +2,7 @@ import { createContext, useContext, useReducer, useEffect, useCallback } from 'r
 import { v4 as uuid } from 'uuid';
 import { fetchAllInvoiceData } from '../data/apiClient';
 import { createDefaultElementData, defaultWidthFor } from '../data/elementDefinitions';
+import { createDefaultTemplateElements } from '../data/defaultTemplate';
 
 const DesignerContext = createContext(null);
 
@@ -40,7 +41,76 @@ const initialState = {
 function reducer(state, action) {
   switch (action.type) {
     case 'DATA_LOADED':
-      return { ...state, loading: false, apiData: action.payload };
+      return {
+        ...state,
+        loading: false,
+        apiData: action.payload,
+        // Only seed the sample invoice on the very first load — a later
+        // reload of apiData (e.g. after a "reset to sample") never happens
+        // while elements already exist unless RESET_TO_SAMPLE asked for it.
+        elements: state.elements.length > 0 ? state.elements : createDefaultTemplateElements(),
+      };
+
+    case 'RESET_TO_SAMPLE':
+      return {
+        ...state,
+        apiData: action.payload,
+        elements: createDefaultTemplateElements(),
+        selectedElementId: null,
+      };
+
+    case 'UPDATE_COMPANY':
+      return { ...state, apiData: { ...state.apiData, company: { ...state.apiData.company, ...action.payload } } };
+
+    case 'UPDATE_CLIENT':
+      return { ...state, apiData: { ...state.apiData, client: { ...state.apiData.client, ...action.payload } } };
+
+    case 'UPDATE_INVOICE_META':
+      return { ...state, apiData: { ...state.apiData, invoiceMeta: { ...state.apiData.invoiceMeta, ...action.payload } } };
+
+    case 'UPDATE_SIGNATORY':
+      return { ...state, apiData: { ...state.apiData, signatory: { ...state.apiData.signatory, ...action.payload } } };
+
+    case 'UPDATE_PRODUCT': {
+      const { productId, patch } = action.payload;
+      return {
+        ...state,
+        apiData: {
+          ...state.apiData,
+          products: state.apiData.products.map((p) => (p.id === productId ? { ...p, ...patch } : p)),
+        },
+      };
+    }
+
+    case 'ADD_PRODUCT': {
+      const newProduct = {
+        id: uuid(),
+        sku: '',
+        name: 'New Item',
+        description: '',
+        category: '',
+        qty: 1,
+        unit: '',
+        unitPrice: 0,
+        discountPercent: 0,
+        taxPercent: 0,
+      };
+      return { ...state, apiData: { ...state.apiData, products: [...state.apiData.products, newProduct] } };
+    }
+
+    case 'REMOVE_PRODUCT': {
+      const { productId } = action.payload;
+      return {
+        ...state,
+        apiData: { ...state.apiData, products: state.apiData.products.filter((p) => p.id !== productId) },
+        // Also drop the removed product from any Product Table's selection so it disappears from the invoice too.
+        elements: state.elements.map((el) =>
+          el.type === 'PRODUCT_TABLE'
+            ? { ...el, data: { ...el.data, selectedProductIds: (el.data.selectedProductIds || []).filter((id) => id !== productId) } }
+            : el
+        ),
+      };
+    }
 
     case 'ADD_ELEMENT': {
       const { elementType, zone, x, y } = action.payload;
@@ -162,6 +232,25 @@ export function DesignerProvider({ children }) {
 
   const resetCanvas = useCallback(() => dispatch({ type: 'RESET_CANVAS' }), []);
 
+  const resetToSample = useCallback(() => {
+    fetchAllInvoiceData().then((payload) => dispatch({ type: 'RESET_TO_SAMPLE', payload }));
+  }, []);
+
+  const updateCompany = useCallback((patch) => dispatch({ type: 'UPDATE_COMPANY', payload: patch }), []);
+  const updateClient = useCallback((patch) => dispatch({ type: 'UPDATE_CLIENT', payload: patch }), []);
+  const updateInvoiceMeta = useCallback((patch) => dispatch({ type: 'UPDATE_INVOICE_META', payload: patch }), []);
+  const updateSignatory = useCallback((patch) => dispatch({ type: 'UPDATE_SIGNATORY', payload: patch }), []);
+
+  const updateProduct = useCallback((productId, patch) => {
+    dispatch({ type: 'UPDATE_PRODUCT', payload: { productId, patch } });
+  }, []);
+
+  const addProduct = useCallback(() => dispatch({ type: 'ADD_PRODUCT' }), []);
+
+  const removeProduct = useCallback((productId) => {
+    dispatch({ type: 'REMOVE_PRODUCT', payload: { productId } });
+  }, []);
+
   const value = {
     ...state,
     addElement,
@@ -173,6 +262,14 @@ export function DesignerProvider({ children }) {
     bringToFront,
     loadTemplate,
     resetCanvas,
+    resetToSample,
+    updateCompany,
+    updateClient,
+    updateInvoiceMeta,
+    updateSignatory,
+    updateProduct,
+    addProduct,
+    removeProduct,
   };
 
   return <DesignerContext.Provider value={value}>{children}</DesignerContext.Provider>;

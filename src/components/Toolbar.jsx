@@ -16,7 +16,7 @@ function downloadFallback(json, filename) {
 }
 
 export function Toolbar({ canvasRef }) {
-  const { elements, loadTemplate, resetCanvas, apiData, selectElement } = useDesigner();
+  const { elements, loadTemplate, resetCanvas, resetToSample, apiData, selectElement } = useDesigner();
   const fileInputRef = useRef(null);
   const templatesDirRef = useRef(null); // remembers the folder the user picked, for the rest of this session
   const [exporting, setExporting] = useState(false);
@@ -62,6 +62,11 @@ export function Toolbar({ canvasRef }) {
   };
 
   const handleLoadClick = () => fileInputRef.current?.click();
+
+  const handleResetToSample = () => {
+    if (!window.confirm('Reset the page back to the sample Tax Invoice? This discards your current edits.')) return;
+    resetToSample();
+  };
 
   const handleLoadFile = async (e) => {
     const file = e.target.files?.[0];
@@ -139,6 +144,7 @@ export function Toolbar({ canvasRef }) {
         <button onClick={handleSaveTemplate}>Save Template</button>
         <button onClick={handleLoadClick}>Load Template</button>
         <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={handleLoadFile} />
+        <button onClick={handleResetToSample} className="toolbar__ghost">Reset to Sample</button>
         <button onClick={resetCanvas} className="toolbar__danger">Clear Page</button>
         <button onClick={handleExportPdf} className="toolbar__primary" disabled={exporting}>
           {exporting ? 'Exporting…' : 'Export PDF'}

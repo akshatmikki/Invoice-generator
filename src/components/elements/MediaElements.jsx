@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { styleToCss } from '../../utils/textStyle';
 
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -52,13 +53,7 @@ export function ImageElement({ data, onChange }) {
   return (
     <div className="el el--image">
       <UploadZone imageData={data.imageData} onUpload={(imageData) => onChange({ imageData })} placeholderText="Upload an image" height={120} />
-      <input
-        className="el-caption-input"
-        type="text"
-        placeholder="Optional caption…"
-        value={data.caption}
-        onChange={(e) => onChange({ caption: e.target.value })}
-      />
+      {data.caption && <div className="el-caption-display" style={styleToCss(data.styles?.caption)}>{data.caption}</div>}
     </div>
   );
 }
@@ -67,12 +62,7 @@ export function SignatureElement({ data, onChange }) {
   return (
     <div className="el el--signature">
       <UploadZone imageData={data.imageData} onUpload={(imageData) => onChange({ imageData })} placeholderText="Upload signature / stamp" height={80} />
-      <input
-        className="el-caption-input el-caption-input--center"
-        type="text"
-        value={data.label}
-        onChange={(e) => onChange({ label: e.target.value })}
-      />
+      {data.label && <div className="el-caption-display el-caption-display--center" style={styleToCss(data.styles?.label)}>{data.label}</div>}
     </div>
   );
 }
