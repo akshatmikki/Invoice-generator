@@ -83,7 +83,7 @@ export function PropertiesPanel() {
             currencySymbol={currencySymbol}
             currencyDecimals={currencyDecimals}
             onUpdateProduct={updateProduct}
-            onAddProduct={addProduct}
+            onAddProduct={() => addProduct(element.instanceId)}
             onRemoveProduct={removeProduct}
           />
         )}

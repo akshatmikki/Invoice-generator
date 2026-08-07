@@ -95,7 +95,20 @@ function reducer(state, action) {
         discountPercent: 0,
         taxPercent: 0,
       };
-      return { ...state, apiData: { ...state.apiData, products: [...state.apiData.products, newProduct] } };
+      const { instanceId } = action.payload || {};
+      return {
+        ...state,
+        apiData: { ...state.apiData, products: [...state.apiData.products, newProduct] },
+        // Also tick the new item on so it actually shows up on the invoice table you were editing —
+        // adding it to the catalog alone would otherwise leave it invisible until manually checked.
+        elements: instanceId
+          ? state.elements.map((el) =>
+              el.instanceId === instanceId
+                ? { ...el, data: { ...el.data, selectedProductIds: [...(el.data.selectedProductIds || []), newProduct.id] } }
+                : el
+            )
+          : state.elements,
+      };
     }
 
     case 'REMOVE_PRODUCT': {
@@ -245,7 +258,7 @@ export function DesignerProvider({ children }) {
     dispatch({ type: 'UPDATE_PRODUCT', payload: { productId, patch } });
   }, []);
 
-  const addProduct = useCallback(() => dispatch({ type: 'ADD_PRODUCT' }), []);
+  const addProduct = useCallback((instanceId) => dispatch({ type: 'ADD_PRODUCT', payload: { instanceId } }), []);
 
   const removeProduct = useCallback((productId) => {
     dispatch({ type: 'REMOVE_PRODUCT', payload: { productId } });
