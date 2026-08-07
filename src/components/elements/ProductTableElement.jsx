@@ -34,21 +34,32 @@ function DraggableColumnHeader({ instanceId, column, className }) {
   );
 }
 
+function tableStyleVars(tableStyle = {}) {
+  return {
+    '--tbl-header-bg': tableStyle.headerBg || undefined,
+    '--tbl-header-color': tableStyle.headerColor || undefined,
+    '--tbl-border-color': tableStyle.borderColor || undefined,
+    '--tbl-font-size': tableStyle.fontSize ? `${tableStyle.fontSize}px` : undefined,
+    '--tbl-stripe-bg': tableStyle.striped ? tableStyle.stripeColor || '#f2efe8' : 'transparent',
+  };
+}
+
 export function ProductTableElement({ instanceId, data, products, currencySymbol, currencyDecimals = 2 }) {
   const columnDefs = getProductColumnDefinitions();
   const visible = columnDefs.filter((c) => data.visibleColumns.includes(c.key));
   const selected = products.filter((p) => data.selectedProductIds.includes(p.id));
+  const styleVars = tableStyleVars(data.tableStyle);
 
   if (selected.length === 0) {
     return (
-      <div className="el el--product-table">
+      <div className="el el--product-table" style={styleVars}>
         <div className="empty-hint">No line items selected yet — select this block and use the panel on the right to choose which ones to include.</div>
       </div>
     );
   }
 
   return (
-    <div className="el el--product-table">
+    <div className="el el--product-table" style={styleVars}>
       <table className="invoice-table">
         <thead>
           <tr>

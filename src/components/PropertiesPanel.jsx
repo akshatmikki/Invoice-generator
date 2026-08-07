@@ -1,4 +1,4 @@
-import { useDesigner, findElement } from '../context/DesignerContext';
+import { useDesigner, findElementAcrossPages } from '../context/DesignerContext';
 import { ELEMENT_TYPES, findPaletteDefinition } from '../data/elementDefinitions';
 import {
   CompanyInfoForm,
@@ -9,16 +9,20 @@ import {
   ProductTableForm,
   TotalsForm,
   ChartForm,
+  PageSetupForm,
 } from './PropertiesForms';
 
 export function PropertiesPanel() {
   const {
-    elements,
+    pages,
     selectedElementId,
     updateElementData,
     resizeElement,
+    resizeElementHeight,
     removeElement,
     apiData,
+    pageSettings,
+    updatePageSettings,
     updateCompany,
     updateClient,
     updateInvoiceMeta,
@@ -31,12 +35,15 @@ export function PropertiesPanel() {
     return (
       <aside className="properties">
         <div className="properties__title">Properties</div>
-        <p className="properties__empty">Select an element on the page to customize it here, or drag its right edge to resize.</p>
+        <p className="properties__empty">Select an element on the page to customize it here, or drag its edges to resize. Nothing selected — configure the page itself below.</p>
+        <div className="properties__section">
+          <PageSetupForm pageSettings={pageSettings} onChange={updatePageSettings} />
+        </div>
       </aside>
     );
   }
 
-  const element = findElement(elements, selectedElementId);
+  const element = findElementAcrossPages(pages, selectedElementId);
   if (!element) return null;
   const paletteDef = findPaletteDefinition(element.type);
   const onChange = (patch) => updateElementData(element.instanceId, patch);
@@ -59,8 +66,23 @@ export function PropertiesPanel() {
             onChange={(e) => resizeElement(element.instanceId, Number(e.target.value))}
           />
         </label>
+        <label>
+          Height ({element.height ? `${Math.round(element.height)}px` : 'Auto'})
+          <input
+            type="range"
+            min="28"
+            max="1000"
+            value={element.height || 100}
+            onChange={(e) => resizeElementHeight(element.instanceId, Number(e.target.value))}
+          />
+        </label>
+        {element.height && (
+          <button type="button" className="pf-reset-btn" onClick={() => resizeElementHeight(element.instanceId, null)}>
+            Reset to auto height
+          </button>
+        )}
         <p className="properties__hint">
-          Drag its top bar on the page to move it anywhere — including next to another element in the same row.
+          Drag its top bar on the page to move it, or drag its right/bottom/corner edge to resize width and height.
         </p>
       </div>
 

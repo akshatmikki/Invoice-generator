@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { v4 as uuid } from 'uuid';
 import { useDesigner } from '../context/DesignerContext';
 
 const SUPPORTS_FS_ACCESS = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
@@ -16,7 +17,7 @@ function downloadFallback(json, filename) {
 }
 
 export function Toolbar({ canvasRef }) {
-  const { elements, loadTemplate, resetCanvas, resetToSample, apiData, selectElement } = useDesigner();
+  const { pages, loadTemplate, addPage, resetToSample, apiData, selectElement, pageSettings } = useDesigner();
   const fileInputRef = useRef(null);
   const templatesDirRef = useRef(null); // remembers the folder the user picked, for the rest of this session
   const [exporting, setExporting] = useState(false);
@@ -28,7 +29,7 @@ export function Toolbar({ canvasRef }) {
   };
 
   const handleSaveTemplate = async () => {
-    const json = JSON.stringify({ elements }, null, 2);
+    const json = JSON.stringify({ pages }, null, 2);
     const filename = `invoice-template-${Date.now()}.json`;
 
     if (SUPPORTS_FS_ACCESS) {
@@ -64,7 +65,7 @@ export function Toolbar({ canvasRef }) {
   const handleLoadClick = () => fileInputRef.current?.click();
 
   const handleResetToSample = () => {
-    if (!window.confirm('Reset the page back to the sample Tax Invoice? This discards your current edits.')) return;
+    if (!window.confirm('Reset the whole document back to the sample Tax Invoice? This discards your current edits, on every page.')) return;
     resetToSample();
   };
 
@@ -74,7 +75,9 @@ export function Toolbar({ canvasRef }) {
     const text = await file.text();
     try {
       const parsed = JSON.parse(text);
-      if (parsed.elements) loadTemplate(parsed.elements);
+      if (Array.isArray(parsed.pages)) loadTemplate(parsed.pages);
+      // Backward compatible with single-page templates saved before multi-page support.
+      else if (Array.isArray(parsed.elements)) loadTemplate([{ id: uuid(), elements: parsed.elements }]);
       else alert('This file does not look like a valid invoice template.');
     } catch {
       alert('Could not read that file — make sure it is a template JSON exported from this app.');
@@ -86,40 +89,25 @@ export function Toolbar({ canvasRef }) {
     if (!canvasRef.current) return;
     setExporting(true);
     try {
-      // Deselect any element first: this closes editing panels (product/column
-      // pickers, totals controls, text editors) so only the finished invoice —
-      // not the design-time controls — gets captured.
+      // Deselect any element first so the selection outline, move handle and
+      // resize handle aren't visible in the captured image.
       selectElement(null);
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-      const node = canvasRef.current;
-      const canvasImg = await html2canvas(node, { scale: 2, backgroundColor: '#ffffff' });
-      const imgData = canvasImg.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth;
-      const imgHeight = (canvasImg.height * imgWidth) / canvasImg.width;
+      // Size the PDF page to match the canvas's own (possibly custom) page size and
+      // orientation exactly, converting 96dpi px to pt (1px = 0.75pt), instead of
+      // always forcing a fixed A4 page.
+      const widthPt = pageSettings.width * 0.75;
+      const heightPt = pageSettings.height * 0.75;
+      const pdf = new jsPDF({ orientation: widthPt > heightPt ? 'landscape' : 'portrait', unit: 'pt', format: [widthPt, heightPt] });
 
-      if (imgHeight <= pageHeight) {
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      } else {
-        // Slice the tall image across multiple pages
-        let renderedHeight = 0;
-        const pageCanvas = document.createElement('canvas');
-        const scaleFactor = canvasImg.width / imgWidth;
-        pageCanvas.width = canvasImg.width;
-        pageCanvas.height = pageHeight * scaleFactor;
-        const ctx = pageCanvas.getContext('2d');
-
-        while (renderedHeight < canvasImg.height) {
-          ctx.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
-          ctx.drawImage(canvasImg, 0, -renderedHeight);
-          const pageData = pageCanvas.toDataURL('image/png');
-          if (renderedHeight > 0) pdf.addPage();
-          pdf.addImage(pageData, 'PNG', 0, 0, imgWidth, pageHeight);
-          renderedHeight += pageCanvas.height;
-        }
+      for (let i = 0; i < pages.length; i++) {
+        const node = canvasRef.current.getPageNode(pages[i].id);
+        if (!node) continue;
+        const canvasImg = await html2canvas(node, { scale: 2, backgroundColor: '#ffffff' });
+        const imgData = canvasImg.toDataURL('image/png');
+        if (i > 0) pdf.addPage([widthPt, heightPt], widthPt > heightPt ? 'landscape' : 'portrait');
+        pdf.addImage(imgData, 'PNG', 0, 0, widthPt, heightPt);
       }
 
       pdf.save(`${apiData?.invoiceMeta?.invoiceNumber || 'invoice'}.pdf`);
@@ -141,13 +129,13 @@ export function Toolbar({ canvasRef }) {
             Change Folder
           </button>
         )}
+        <button onClick={() => addPage(pages[pages.length - 1]?.id)} className="toolbar__ghost">+ Add Page</button>
         <button onClick={handleSaveTemplate}>Save Template</button>
         <button onClick={handleLoadClick}>Load Template</button>
         <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={handleLoadFile} />
         <button onClick={handleResetToSample} className="toolbar__ghost">Reset to Sample</button>
-        <button onClick={resetCanvas} className="toolbar__danger">Clear Page</button>
         <button onClick={handleExportPdf} className="toolbar__primary" disabled={exporting}>
-          {exporting ? 'Exporting…' : 'Export PDF'}
+          {exporting ? 'Exporting…' : `Export PDF${pages.length > 1 ? ` (${pages.length} pages)` : ''}`}
         </button>
       </div>
     </header>

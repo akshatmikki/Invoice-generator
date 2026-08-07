@@ -75,6 +75,7 @@ export function createDefaultElementData(type) {
       return {
         selectedProductIds: [],
         visibleColumns: ['name', 'qty', 'unitPrice', 'unit', 'taxPercent', 'amount'],
+        tableStyle: {},
       };
     case ELEMENT_TYPES.TOTALS:
       return { extraDiscountPercent: 0, extraTaxPercent: 0, showBreakdown: true, totalColumns: [] };

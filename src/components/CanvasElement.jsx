@@ -1,5 +1,5 @@
 import { useRef, useCallback } from 'react';
-import { useDesigner, PAGE_WIDTH } from '../context/DesignerContext';
+import { useDesigner } from '../context/DesignerContext';
 import { ELEMENT_TYPES, findPaletteDefinition } from '../data/elementDefinitions';
 import { LogoElement, ImageElement, SignatureElement } from './elements/MediaElements';
 import { CompanyInfoElement, ClientInfoElement, InvoiceMetaElement } from './elements/InfoElements';
@@ -9,24 +9,27 @@ import { ChartElement } from './elements/ChartElement';
 import { TextBlockElement, DividerElement } from './elements/TextAndDivider';
 
 const MIN_WIDTH = 60;
+const MIN_HEIGHT = 28;
 
-export function CanvasElement({ element }) {
+export function CanvasElement({ element, pageElements }) {
   const {
     selectedElementId,
     selectElement,
     removeElement,
     moveElement,
     resizeElement,
+    resizeElementHeight,
     updateElementData,
     bringToFront,
     apiData,
-    elements,
+    pageSettings,
   } = useDesigner();
 
   const isSelected = selectedElementId === element.instanceId;
   const paletteDef = findPaletteDefinition(element.type);
   const dragState = useRef(null);
   const resizeState = useRef(null);
+  const elRef = useRef(null);
 
   const onChange = (patch) => updateElementData(element.instanceId, patch);
 
@@ -63,36 +66,55 @@ export function CanvasElement({ element }) {
     e.target.releasePointerCapture?.(e.pointerId);
   }, []);
 
-  // --- Resize (drag the right-edge handle to change the box's width) ---
-  const handleResizePointerDown = useCallback(
-    (e) => {
+  // --- Resize (drag an edge/corner handle to change width and/or height) ---
+  // 'width' = right edge, 'height' = bottom edge, 'both' = corner handle.
+  const beginResize = useCallback(
+    (mode) => (e) => {
       e.stopPropagation();
-      resizeState.current = { startX: e.clientX, origWidth: element.width };
+      // Seed from the OUTER box's rendered height — that's what element.height ends up
+      // controlling, so the drag has to start from the same measurement or the box jumps.
+      const currentHeight = element.height ?? elRef.current?.getBoundingClientRect().height ?? 100;
+      resizeState.current = { startX: e.clientX, startY: e.clientY, origWidth: element.width, origHeight: currentHeight, mode };
       e.target.setPointerCapture(e.pointerId);
     },
-    [element.width]
+    [element.width, element.height]
   );
 
-  const handleResizePointerMove = useCallback(
+  const handleResizeMove = useCallback(
     (e) => {
       if (!resizeState.current) return;
-      const { startX, origWidth } = resizeState.current;
-      const maxWidth = PAGE_WIDTH - element.x - 8;
-      const newWidth = Math.min(maxWidth, Math.max(MIN_WIDTH, origWidth + (e.clientX - startX)));
-      resizeElement(element.instanceId, newWidth);
+      const { startX, startY, origWidth, origHeight, mode } = resizeState.current;
+      if (mode === 'width' || mode === 'both') {
+        const maxWidth = pageSettings.width - element.x - 8;
+        const newWidth = Math.min(maxWidth, Math.max(MIN_WIDTH, origWidth + (e.clientX - startX)));
+        resizeElement(element.instanceId, newWidth);
+      }
+      if (mode === 'height' || mode === 'both') {
+        const newHeight = Math.max(MIN_HEIGHT, origHeight + (e.clientY - startY));
+        resizeElementHeight(element.instanceId, newHeight);
+      }
     },
-    [element.instanceId, element.x, resizeElement]
+    [element.instanceId, element.x, pageSettings.width, resizeElement, resizeElementHeight]
   );
 
-  const handleResizePointerUp = useCallback((e) => {
+  const handleResizeUp = useCallback((e) => {
     resizeState.current = null;
     e.target.releasePointerCapture?.(e.pointerId);
   }, []);
 
+  const handleResetHeight = useCallback(
+    (e) => {
+      e.stopPropagation();
+      resizeElementHeight(element.instanceId, null);
+    },
+    [element.instanceId, resizeElementHeight]
+  );
+
   return (
     <div
+      ref={elRef}
       className={`canvas-el ${isSelected ? 'canvas-el--selected' : ''}`}
-      style={{ left: element.x, top: element.y, width: element.width }}
+      style={{ left: element.x, top: element.y, width: element.width, height: element.height || undefined }}
       onClick={handleSelect}
     >
       <div
@@ -117,17 +139,35 @@ export function CanvasElement({ element }) {
         </div>
       </div>
 
-      <div className="canvas-el__body">
-        {renderElement(element, { onChange, apiData, elements })}
+      <div className="canvas-el__body" style={element.height ? { overflow: 'auto' } : undefined}>
+        {renderElement(element, { onChange, apiData, elements: pageElements })}
       </div>
 
       <div
-        className="canvas-el__resize-handle"
+        className="canvas-el__resize-handle canvas-el__resize-handle--e"
         data-html2canvas-ignore="true"
-        onPointerDown={handleResizePointerDown}
-        onPointerMove={handleResizePointerMove}
-        onPointerUp={handleResizePointerUp}
+        onPointerDown={beginResize('width')}
+        onPointerMove={handleResizeMove}
+        onPointerUp={handleResizeUp}
         title="Drag to resize width"
+      />
+      <div
+        className="canvas-el__resize-handle canvas-el__resize-handle--s"
+        data-html2canvas-ignore="true"
+        onPointerDown={beginResize('height')}
+        onPointerMove={handleResizeMove}
+        onPointerUp={handleResizeUp}
+        onDoubleClick={handleResetHeight}
+        title="Drag to resize height — double-click to fit content again"
+      />
+      <div
+        className="canvas-el__resize-handle canvas-el__resize-handle--se"
+        data-html2canvas-ignore="true"
+        onPointerDown={beginResize('both')}
+        onPointerMove={handleResizeMove}
+        onPointerUp={handleResizeUp}
+        onDoubleClick={handleResetHeight}
+        title="Drag to resize width & height — double-click to fit content again"
       />
     </div>
   );

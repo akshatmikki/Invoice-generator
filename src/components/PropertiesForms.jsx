@@ -4,6 +4,7 @@ import { META_ROWS } from './elements/InfoElements';
 import { QUERYABLE_FIELDS, NUMERIC_FIELDS, OPERATORS, AGGREGATIONS, fieldType } from '../utils/query';
 import { makeStyleSetter } from '../utils/textStyle';
 import { TextField } from './TextField';
+import { PAGE_SIZE_PRESETS } from '../context/DesignerContext';
 import { v4 as uuid } from 'uuid';
 
 function Field({ label, value, placeholder, onChange, type = 'text' }) {
@@ -18,6 +19,71 @@ function Field({ label, value, placeholder, onChange, type = 'text' }) {
         onChange={(e) => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
       />
     </label>
+  );
+}
+
+function ColorField({ label, value, fallback, onChange, onReset }) {
+  return (
+    <label className="pf-field">
+      <span className="pf-field__label">{label}</span>
+      <div className="pf-color-row">
+        <input type="color" className="pf-fmt-color" value={value || fallback} onChange={(e) => onChange(e.target.value)} />
+        {onReset && (
+          <button type="button" className="pf-reset-btn" onClick={onReset}>Default</button>
+        )}
+      </div>
+    </label>
+  );
+}
+
+export function PageSetupForm({ pageSettings, onChange }) {
+  const isLandscape = pageSettings.width > pageSettings.height;
+
+  const applyPreset = (name) => {
+    if (name === 'Custom') {
+      onChange({ preset: 'Custom' });
+      return;
+    }
+    const size = PAGE_SIZE_PRESETS[name];
+    const oriented = isLandscape ? { width: size.height, height: size.width } : { width: size.width, height: size.height };
+    onChange({ preset: name, ...oriented });
+  };
+
+  const setOrientation = (wantLandscape) => {
+    if (wantLandscape === isLandscape) return;
+    onChange({ width: pageSettings.height, height: pageSettings.width });
+  };
+
+  return (
+    <div className="pf">
+      <div className="pf-section-title">Page size</div>
+      <label className="pf-field">
+        <span className="pf-field__label">Preset</span>
+        <select className="pf-input" value={pageSettings.preset} onChange={(e) => applyPreset(e.target.value)}>
+          {Object.keys(PAGE_SIZE_PRESETS).map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+          <option value="Custom">Custom</option>
+        </select>
+      </label>
+      <div className="pf-product__grid">
+        <Field label="Width (px)" type="number" value={pageSettings.width} onChange={(v) => onChange({ width: Math.max(200, v), preset: 'Custom' })} />
+        <Field label="Height (px)" type="number" value={pageSettings.height} onChange={(v) => onChange({ height: Math.max(200, v), preset: 'Custom' })} />
+      </div>
+      <div className="pf-chips">
+        <button type="button" className={`chip ${!isLandscape ? 'chip--active' : ''}`} onClick={() => setOrientation(false)}>Portrait</button>
+        <button type="button" className={`chip ${isLandscape ? 'chip--active' : ''}`} onClick={() => setOrientation(true)}>Landscape</button>
+      </div>
+
+      <div className="pf-section-title">Page design</div>
+      <ColorField
+        label="Background color"
+        value={pageSettings.background}
+        fallback="#fbfaf7"
+        onChange={(v) => onChange({ background: v })}
+        onReset={() => onChange({ background: '' })}
+      />
+    </div>
   );
 }
 
@@ -106,8 +172,18 @@ export function CaptionForm({ label, value, onChange, fieldKey, data }) {
   );
 }
 
+const TABLE_STYLE_DEFAULTS = {
+  headerBg: '#1f2733',
+  headerColor: '#fbfaf7',
+  borderColor: '#e2dfd6',
+  stripeColor: '#f2efe8',
+  fontSize: 12.5,
+};
+
 export function ProductTableForm({ elementData, onChange, products, currencySymbol, currencyDecimals, onUpdateProduct, onAddProduct, onRemoveProduct }) {
   const columnDefs = getProductColumnDefinitions();
+  const tableStyle = elementData.tableStyle || {};
+  const setTableStyle = (patch) => onChange({ tableStyle: { ...tableStyle, ...patch } });
 
   const toggleProduct = (id) => {
     const next = elementData.selectedProductIds.includes(id)
@@ -165,6 +241,48 @@ export function ProductTableForm({ elementData, onChange, products, currencySymb
           </button>
         ))}
       </div>
+
+      <div className="pf-section-title">Table style</div>
+      <ColorField
+        label="Header background"
+        value={tableStyle.headerBg}
+        fallback={TABLE_STYLE_DEFAULTS.headerBg}
+        onChange={(v) => setTableStyle({ headerBg: v })}
+        onReset={() => setTableStyle({ headerBg: undefined })}
+      />
+      <ColorField
+        label="Header text"
+        value={tableStyle.headerColor}
+        fallback={TABLE_STYLE_DEFAULTS.headerColor}
+        onChange={(v) => setTableStyle({ headerColor: v })}
+        onReset={() => setTableStyle({ headerColor: undefined })}
+      />
+      <ColorField
+        label="Border color"
+        value={tableStyle.borderColor}
+        fallback={TABLE_STYLE_DEFAULTS.borderColor}
+        onChange={(v) => setTableStyle({ borderColor: v })}
+        onReset={() => setTableStyle({ borderColor: undefined })}
+      />
+      <Field
+        label="Cell font size (px)"
+        type="number"
+        value={tableStyle.fontSize || TABLE_STYLE_DEFAULTS.fontSize}
+        onChange={(v) => setTableStyle({ fontSize: v })}
+      />
+      <label className="pf-checkbox">
+        <input type="checkbox" checked={!!tableStyle.striped} onChange={(e) => setTableStyle({ striped: e.target.checked })} />
+        Striped rows
+      </label>
+      {tableStyle.striped && (
+        <ColorField
+          label="Stripe color"
+          value={tableStyle.stripeColor}
+          fallback={TABLE_STYLE_DEFAULTS.stripeColor}
+          onChange={(v) => setTableStyle({ stripeColor: v })}
+          onReset={() => setTableStyle({ stripeColor: undefined })}
+        />
+      )}
     </div>
   );
 }
