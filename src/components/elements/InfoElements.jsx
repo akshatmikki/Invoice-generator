@@ -58,6 +58,15 @@ export const META_ROWS = [
   ['Despatched through', 'despatchedThrough', 'Destination', 'destination'],
 ];
 
+/** Renders a META_ROWS value safely — booleans, null, and array/object values (e.g. isactive, DomainEvents) don't render as JSX children on their own. */
+export function metaDisplayValue(raw) {
+  if (raw === null || raw === undefined || raw === '') return '';
+  if (typeof raw === 'boolean') return String(raw);
+  if (Array.isArray(raw)) return raw.length ? JSON.stringify(raw) : '';
+  if (typeof raw === 'object') return JSON.stringify(raw);
+  return raw;
+}
+
 export function InvoiceMetaElement({ invoiceMeta }) {
   if (!invoiceMeta) return null;
   const styles = invoiceMeta.styles;
@@ -67,12 +76,14 @@ export function InvoiceMetaElement({ invoiceMeta }) {
         <div className="el-meta-grid__row" key={keyA}>
           <div className="el-meta-grid__cell">
             <span className="el-meta-grid__label">{labelA}</span>
-            <span className="el-meta-grid__value"><Styled styles={styles} field={keyA}>{invoiceMeta[keyA]}</Styled></span>
+            <span className="el-meta-grid__value"><Styled styles={styles} field={keyA}>{metaDisplayValue(invoiceMeta[keyA])}</Styled></span>
           </div>
-          <div className="el-meta-grid__cell">
-            <span className="el-meta-grid__label">{labelB}</span>
-            <span className="el-meta-grid__value"><Styled styles={styles} field={keyB}>{invoiceMeta[keyB]}</Styled></span>
-          </div>
+          {keyB && (
+            <div className="el-meta-grid__cell">
+              <span className="el-meta-grid__label">{labelB}</span>
+              <span className="el-meta-grid__value"><Styled styles={styles} field={keyB}>{metaDisplayValue(invoiceMeta[keyB])}</Styled></span>
+            </div>
+          )}
         </div>
       ))}
       {invoiceMeta.termsOfDelivery && (

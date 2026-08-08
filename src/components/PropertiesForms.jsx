@@ -1,6 +1,6 @@
-import { getProductColumnDefinitions } from '../data/apiClient';
+import { getProductColumnDefinitions, getOrderInfoColumnDefinitions } from '../data/apiClient';
 import { formatCurrency } from '../utils/calculations';
-import { META_ROWS } from './elements/InfoElements';
+import { META_ROWS, metaDisplayValue } from './elements/InfoElements';
 import { QUERYABLE_FIELDS, NUMERIC_FIELDS, OPERATORS, AGGREGATIONS, fieldType } from '../utils/query';
 import { makeStyleSetter } from '../utils/textStyle';
 import { TextField } from './TextField';
@@ -124,9 +124,9 @@ export function InvoiceMetaForm({ invoiceMeta, onChange }) {
   return (
     <div className="pf">
       {META_ROWS.flatMap(([labelA, keyA, labelB, keyB]) => [
-        <TextField key={keyA} label={labelA} value={invoiceMeta[keyA]} onChange={(v) => onChange({ [keyA]: v })} style={invoiceMeta.styles?.[keyA]} onStyleChange={setStyle(keyA)} />,
-        <TextField key={keyB} label={labelB} value={invoiceMeta[keyB]} onChange={(v) => onChange({ [keyB]: v })} style={invoiceMeta.styles?.[keyB]} onStyleChange={setStyle(keyB)} />,
-      ])}
+        <TextField key={keyA} label={labelA} value={metaDisplayValue(invoiceMeta[keyA])} onChange={(v) => onChange({ [keyA]: v })} style={invoiceMeta.styles?.[keyA]} onStyleChange={setStyle(keyA)} />,
+        keyB && <TextField key={keyB} label={labelB} value={metaDisplayValue(invoiceMeta[keyB])} onChange={(v) => onChange({ [keyB]: v })} style={invoiceMeta.styles?.[keyB]} onStyleChange={setStyle(keyB)} />,
+      ].filter(Boolean))}
       <TextField
         label="Terms of Delivery"
         value={invoiceMeta.termsOfDelivery}
@@ -134,6 +134,105 @@ export function InvoiceMetaForm({ invoiceMeta, onChange }) {
         style={invoiceMeta.styles?.termsOfDelivery}
         onStyleChange={setStyle('termsOfDelivery')}
       />
+    </div>
+  );
+}
+
+export function OrderInfoTableForm({ elementData, onChange, items, onUpdateItem, onAddItem, onRemoveItem }) {
+  const columnDefs = getOrderInfoColumnDefinitions();
+  const tableStyle = elementData.tableStyle || {};
+  const setTableStyle = (patch) => onChange({ tableStyle: { ...tableStyle, ...patch } });
+
+  const toggleRow = (id) => {
+    const next = elementData.selectedRowIds.includes(id)
+      ? elementData.selectedRowIds.filter((x) => x !== id)
+      : [...elementData.selectedRowIds, id];
+    onChange({ selectedRowIds: next });
+  };
+
+  const toggleColumn = (key) => {
+    const next = elementData.visibleColumns.includes(key)
+      ? elementData.visibleColumns.filter((x) => x !== key)
+      : [...elementData.visibleColumns, key];
+    onChange({ visibleColumns: next });
+  };
+
+  return (
+    <div className="pf">
+      <div className="pf-section-title">Order / shipment rows</div>
+      <p className="pf-hint">Tick to include on the invoice. Edit any field below — order #, dates, truck/driver/trailer/carrier, factoring company, shipper/consignee.</p>
+      <div className="pf-product-list">
+        {items.map((item) => {
+          const setItemStyle = (key) => makeStyleSetter(item, key, (patch) => onUpdateItem(item.id, patch));
+          return (
+            <div className="pf-product" key={item.id}>
+              <div className="pf-product__head">
+                <input type="checkbox" checked={elementData.selectedRowIds.includes(item.id)} onChange={() => toggleRow(item.id)} />
+                <button type="button" className="pf-icon-btn" title="Remove row" onClick={() => onRemoveItem(item.id)}>✕</button>
+              </div>
+              <TextField label="Field" value={item.label} placeholder="Field name" onChange={(v) => onUpdateItem(item.id, { label: v })} style={item.styles?.label} onStyleChange={setItemStyle('label')} />
+              <TextField label="Value" value={item.value} placeholder="Value" onChange={(v) => onUpdateItem(item.id, { value: v })} style={item.styles?.value} onStyleChange={setItemStyle('value')} />
+            </div>
+          );
+        })}
+      </div>
+      <button type="button" className="pf-add-btn" onClick={onAddItem}>+ Add row</button>
+
+      <div className="pf-section-title">Columns shown</div>
+      <div className="pf-chips">
+        {columnDefs.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            className={`chip ${elementData.visibleColumns.includes(c.key) ? 'chip--active' : ''}`}
+            onClick={() => toggleColumn(c.key)}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="pf-section-title">Table style</div>
+      <ColorField
+        label="Header background"
+        value={tableStyle.headerBg}
+        fallback={TABLE_STYLE_DEFAULTS.headerBg}
+        onChange={(v) => setTableStyle({ headerBg: v })}
+        onReset={() => setTableStyle({ headerBg: undefined })}
+      />
+      <ColorField
+        label="Header text"
+        value={tableStyle.headerColor}
+        fallback={TABLE_STYLE_DEFAULTS.headerColor}
+        onChange={(v) => setTableStyle({ headerColor: v })}
+        onReset={() => setTableStyle({ headerColor: undefined })}
+      />
+      <ColorField
+        label="Border color"
+        value={tableStyle.borderColor}
+        fallback={TABLE_STYLE_DEFAULTS.borderColor}
+        onChange={(v) => setTableStyle({ borderColor: v })}
+        onReset={() => setTableStyle({ borderColor: undefined })}
+      />
+      <Field
+        label="Cell font size (px)"
+        type="number"
+        value={tableStyle.fontSize || TABLE_STYLE_DEFAULTS.fontSize}
+        onChange={(v) => setTableStyle({ fontSize: v })}
+      />
+      <label className="pf-checkbox">
+        <input type="checkbox" checked={!!tableStyle.striped} onChange={(e) => setTableStyle({ striped: e.target.checked })} />
+        Striped rows
+      </label>
+      {tableStyle.striped && (
+        <ColorField
+          label="Stripe color"
+          value={tableStyle.stripeColor}
+          fallback={TABLE_STYLE_DEFAULTS.stripeColor}
+          onChange={(v) => setTableStyle({ stripeColor: v })}
+          onReset={() => setTableStyle({ stripeColor: undefined })}
+        />
+      )}
     </div>
   );
 }
@@ -221,6 +320,16 @@ export function ProductTableForm({ elementData, onChange, products, currencySymb
                 <Field label="Discount %" type="number" value={p.discountPercent} onChange={(v) => onUpdateProduct(p.id, { discountPercent: v })} />
                 <Field label="VAT %" type="number" value={p.taxPercent} onChange={(v) => onUpdateProduct(p.id, { taxPercent: v })} />
               </div>
+              <div className="pf-product__grid">
+                <Field label="Weight" type="number" value={p.weight} onChange={(v) => onUpdateProduct(p.id, { weight: v })} />
+                <Field label="Weight Unit" value={p.weightUnit} onChange={(v) => onUpdateProduct(p.id, { weightUnit: v })} />
+                <Field label="Value of Goods" type="number" value={p.valueOfGoods} onChange={(v) => onUpdateProduct(p.id, { valueOfGoods: v })} />
+                <Field label="Equipment Type" value={p.equipmentType} onChange={(v) => onUpdateProduct(p.id, { equipmentType: v })} />
+              </div>
+              <label className="pf-checkbox">
+                <input type="checkbox" checked={!!p.hazmat} onChange={(e) => onUpdateProduct(p.id, { hazmat: e.target.checked })} />
+                Hazmat
+              </label>
               <div className="pf-product__amount">{formatCurrency(p.qty * p.unitPrice, currencySymbol, currencyDecimals)}</div>
             </div>
           );

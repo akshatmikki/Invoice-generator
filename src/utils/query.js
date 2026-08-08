@@ -12,6 +12,9 @@ export const QUERYABLE_FIELDS = [
   { key: 'unitPrice', label: 'Unit Price', type: 'number' },
   { key: 'discountPercent', label: 'Discount %', type: 'number' },
   { key: 'taxPercent', label: 'Tax %', type: 'number' },
+  { key: 'weight', label: 'Weight', type: 'number' },
+  { key: 'valueOfGoods', label: 'Value of Goods', type: 'number' },
+  { key: 'equipmentType', label: 'Equipment Type', type: 'string' },
 ];
 
 /** Only numeric fields make sense as a chart's measured value. */

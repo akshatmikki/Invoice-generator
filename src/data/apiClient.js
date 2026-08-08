@@ -2,9 +2,11 @@ import {
   mockCompany,
   mockClient,
   mockInvoiceMeta,
+  mockOrderInfoItems,
   mockProducts,
   mockSignatory,
   productColumnDefinitions,
+  orderInfoColumnDefinitions,
 } from './mockApiData';
 
 /**
@@ -19,6 +21,7 @@ import {
  *       GET /api/company
  *       GET /api/client
  *       GET /api/invoice-meta
+ *       GET /api/order-info
  *       GET /api/products
  *       GET /api/signatory
  *  Every component in this app calls the functions below — nothing
@@ -46,6 +49,15 @@ export async function fetchInvoiceMeta() {
   return USE_STATIC_DATA ? Promise.resolve(mockInvoiceMeta) : getJson('/api/invoice-meta');
 }
 
+/** Freight order & shipment rows shown in the Order/Shipment Info Table element (see OrderInfoTableElement.jsx) — same list/row shape as products. */
+export async function fetchOrderInfoItems() {
+  return USE_STATIC_DATA ? Promise.resolve(mockOrderInfoItems) : getJson('/api/order-info');
+}
+
+export function getOrderInfoColumnDefinitions() {
+  return orderInfoColumnDefinitions;
+}
+
 export async function fetchProducts() {
   return USE_STATIC_DATA ? Promise.resolve(mockProducts) : getJson('/api/products');
 }
@@ -61,12 +73,13 @@ export function getProductColumnDefinitions() {
 }
 
 export async function fetchAllInvoiceData() {
-  const [company, client, invoiceMeta, products, signatory] = await Promise.all([
+  const [company, client, invoiceMeta, orderInfoItems, products, signatory] = await Promise.all([
     fetchCompany(),
     fetchClient(),
     fetchInvoiceMeta(),
+    fetchOrderInfoItems(),
     fetchProducts(),
     fetchSignatory(),
   ]);
-  return { company, client, invoiceMeta, products, signatory };
+  return { company, client, invoiceMeta, orderInfoItems, products, signatory };
 }

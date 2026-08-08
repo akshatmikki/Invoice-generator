@@ -98,7 +98,7 @@ export function ProductTableElement({ instanceId, data, products, currencySymbol
   );
 }
 
-const numericCols = ['qty', 'unitPrice', 'discountPercent', 'taxPercent', 'amount', 'lineTotal'];
+const numericCols = ['qty', 'unitPrice', 'discountPercent', 'taxPercent', 'amount', 'lineTotal', 'weight', 'valueOfGoods'];
 
 function renderCell(key, product, calc, currencySymbol, currencyDecimals) {
   if (TEXT_COLS.includes(key)) {
@@ -117,6 +117,12 @@ function renderCell(key, product, calc, currencySymbol, currencyDecimals) {
       return `${product.discountPercent}%`;
     case 'taxPercent':
       return `${product.taxPercent}%`;
+    case 'weight':
+      return product.weight != null ? `${product.weight} ${product.weightUnit || ''}`.trim() : '';
+    case 'valueOfGoods':
+      return formatCurrency(product.valueOfGoods, currencySymbol, currencyDecimals);
+    case 'hazmat':
+      return product.hazmat ? 'Yes' : 'No';
     default:
       return product[key];
   }

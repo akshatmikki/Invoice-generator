@@ -54,10 +54,11 @@ function makePage(elements = [], backgroundImage = null) {
 
 const initialState = {
   loading: true,
-  apiData: null, // { company, client, invoiceMeta, products, signatory }
+  apiData: null, // { company, client, invoiceMeta, orderInfoItems, products, signatory }
   pages: [], // [{ id, elements }] — a real multi-page document, rendered top to bottom
   selectedElementId: null,
-  pageSettings: { preset: 'A4', width: PAGE_WIDTH, height: PAGE_HEIGHT, background: '' },
+  // Taller than a standard A4 page to fit the sample freight invoice's Order/Shipment Info Table below the charges section.
+  pageSettings: { preset: 'Custom', width: PAGE_WIDTH, height: 1850, background: '' },
 };
 
 /** Applies `updater` to whichever page contains instanceId (elements ids are unique across the whole document). */
@@ -94,6 +95,51 @@ function reducer(state, action) {
 
     case 'UPDATE_INVOICE_META':
       return { ...state, apiData: { ...state.apiData, invoiceMeta: { ...state.apiData.invoiceMeta, ...action.payload } } };
+
+    case 'UPDATE_ORDER_INFO_ITEM': {
+      const { itemId, patch } = action.payload;
+      return {
+        ...state,
+        apiData: {
+          ...state.apiData,
+          orderInfoItems: state.apiData.orderInfoItems.map((item) => (item.id === itemId ? { ...item, ...patch } : item)),
+        },
+      };
+    }
+
+    case 'ADD_ORDER_INFO_ITEM': {
+      const newItem = { id: uuid(), label: 'New Field', value: '' };
+      const { instanceId } = action.payload || {};
+      return {
+        ...state,
+        apiData: { ...state.apiData, orderInfoItems: [...state.apiData.orderInfoItems, newItem] },
+        pages: instanceId
+          ? updatePageContaining(state.pages, instanceId, (elements) =>
+              elements.map((el) =>
+                el.instanceId === instanceId
+                  ? { ...el, data: { ...el.data, selectedRowIds: [...(el.data.selectedRowIds || []), newItem.id] } }
+                  : el
+              )
+            )
+          : state.pages,
+      };
+    }
+
+    case 'REMOVE_ORDER_INFO_ITEM': {
+      const { itemId } = action.payload;
+      return {
+        ...state,
+        apiData: { ...state.apiData, orderInfoItems: state.apiData.orderInfoItems.filter((item) => item.id !== itemId) },
+        pages: state.pages.map((page) => ({
+          ...page,
+          elements: page.elements.map((el) =>
+            el.type === 'ORDER_INFO_TABLE'
+              ? { ...el, data: { ...el.data, selectedRowIds: (el.data.selectedRowIds || []).filter((id) => id !== itemId) } }
+              : el
+          ),
+        })),
+      };
+    }
 
     case 'UPDATE_SIGNATORY':
       return { ...state, apiData: { ...state.apiData, signatory: { ...state.apiData.signatory, ...action.payload } } };
@@ -374,6 +420,16 @@ export function DesignerProvider({ children }) {
     dispatch({ type: 'REMOVE_PRODUCT', payload: { productId } });
   }, []);
 
+  const updateOrderInfoItem = useCallback((itemId, patch) => {
+    dispatch({ type: 'UPDATE_ORDER_INFO_ITEM', payload: { itemId, patch } });
+  }, []);
+
+  const addOrderInfoItem = useCallback((instanceId) => dispatch({ type: 'ADD_ORDER_INFO_ITEM', payload: { instanceId } }), []);
+
+  const removeOrderInfoItem = useCallback((itemId) => {
+    dispatch({ type: 'REMOVE_ORDER_INFO_ITEM', payload: { itemId } });
+  }, []);
+
   const value = {
     ...state,
     addElement,
@@ -398,6 +454,9 @@ export function DesignerProvider({ children }) {
     updateProduct,
     addProduct,
     removeProduct,
+    updateOrderInfoItem,
+    addOrderInfoItem,
+    removeOrderInfoItem,
   };
 
   return <DesignerContext.Provider value={value}>{children}</DesignerContext.Provider>;

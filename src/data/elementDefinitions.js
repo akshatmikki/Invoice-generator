@@ -13,6 +13,7 @@ export const ELEMENT_TYPES = {
   COMPANY_INFO: 'COMPANY_INFO',
   CLIENT_INFO: 'CLIENT_INFO',
   INVOICE_META: 'INVOICE_META',
+  ORDER_INFO_TABLE: 'ORDER_INFO_TABLE',
   PRODUCT_TABLE: 'PRODUCT_TABLE',
   TOTALS: 'TOTALS',
   CHART: 'CHART',
@@ -36,6 +37,7 @@ export const elementPalette = [
       { type: ELEMENT_TYPES.COMPANY_INFO, label: 'Your Company Details', hint: 'Name, address, email, tax ID', allowedZones: ['header', 'main'], defaultWidth: 260 },
       { type: ELEMENT_TYPES.CLIENT_INFO, label: 'Bill To (Client Details)', hint: 'Client name & billing address', allowedZones: ['header', 'main'], defaultWidth: 260 },
       { type: ELEMENT_TYPES.INVOICE_META, label: 'Invoice Info', hint: 'Invoice #, date, due date, PO #', allowedZones: ['header', 'main'], defaultWidth: 240 },
+      { type: ELEMENT_TYPES.ORDER_INFO_TABLE, label: 'Order / Shipment Info Table', hint: 'Order #, dates, truck/driver/trailer/carrier, shipper & consignee', allowedZones: ['main'], defaultWidth: 750 },
     ],
   },
   {
@@ -77,6 +79,8 @@ export function createDefaultElementData(type) {
         visibleColumns: ['name', 'qty', 'unitPrice', 'unit', 'taxPercent', 'amount'],
         tableStyle: {},
       };
+    case ELEMENT_TYPES.ORDER_INFO_TABLE:
+      return { selectedRowIds: [], visibleColumns: ['label', 'value'], tableStyle: {} };
     case ELEMENT_TYPES.TOTALS:
       return { extraDiscountPercent: 0, extraTaxPercent: 0, showBreakdown: true, totalColumns: [] };
     case ELEMENT_TYPES.CHART:

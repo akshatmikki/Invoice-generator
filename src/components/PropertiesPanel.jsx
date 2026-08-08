@@ -4,6 +4,7 @@ import {
   CompanyInfoForm,
   ClientInfoForm,
   InvoiceMetaForm,
+  OrderInfoTableForm,
   TextBlockForm,
   CaptionForm,
   ProductTableForm,
@@ -29,6 +30,9 @@ export function PropertiesPanel() {
     updateProduct,
     addProduct,
     removeProduct,
+    updateOrderInfoItem,
+    addOrderInfoItem,
+    removeOrderInfoItem,
   } = useDesigner();
 
   if (!selectedElementId) {
@@ -90,6 +94,16 @@ export function PropertiesPanel() {
         {element.type === ELEMENT_TYPES.COMPANY_INFO && <CompanyInfoForm company={apiData?.company} onChange={updateCompany} />}
         {element.type === ELEMENT_TYPES.CLIENT_INFO && <ClientInfoForm client={apiData?.client} onChange={updateClient} />}
         {element.type === ELEMENT_TYPES.INVOICE_META && <InvoiceMetaForm invoiceMeta={apiData?.invoiceMeta} onChange={updateInvoiceMeta} />}
+        {element.type === ELEMENT_TYPES.ORDER_INFO_TABLE && (
+          <OrderInfoTableForm
+            elementData={element.data}
+            onChange={onChange}
+            items={apiData?.orderInfoItems || []}
+            onUpdateItem={updateOrderInfoItem}
+            onAddItem={() => addOrderInfoItem(element.instanceId)}
+            onRemoveItem={removeOrderInfoItem}
+          />
+        )}
         {element.type === ELEMENT_TYPES.TEXT_BLOCK && <TextBlockForm data={element.data} onChange={onChange} />}
         {element.type === ELEMENT_TYPES.IMAGE && (
           <CaptionForm label="Caption" value={element.data.caption} fieldKey="caption" data={element.data} onChange={onChange} />

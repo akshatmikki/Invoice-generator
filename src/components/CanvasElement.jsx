@@ -3,6 +3,7 @@ import { useDesigner } from '../context/DesignerContext';
 import { ELEMENT_TYPES, findPaletteDefinition } from '../data/elementDefinitions';
 import { LogoElement, ImageElement, SignatureElement } from './elements/MediaElements';
 import { CompanyInfoElement, ClientInfoElement, InvoiceMetaElement } from './elements/InfoElements';
+import { OrderInfoTableElement } from './elements/OrderInfoTableElement';
 import { ProductTableElement } from './elements/ProductTableElement';
 import { TotalsElement } from './elements/TotalsElement';
 import { ChartElement } from './elements/ChartElement';
@@ -191,6 +192,8 @@ function renderElement(element, { onChange, apiData, elements }) {
       return <ClientInfoElement client={apiData?.client} />;
     case ELEMENT_TYPES.INVOICE_META:
       return <InvoiceMetaElement invoiceMeta={apiData?.invoiceMeta} />;
+    case ELEMENT_TYPES.ORDER_INFO_TABLE:
+      return <OrderInfoTableElement data={data} items={apiData?.orderInfoItems || []} />;
     case ELEMENT_TYPES.PRODUCT_TABLE:
       return (
         <ProductTableElement
