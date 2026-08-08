@@ -31,7 +31,14 @@ function Page({ page, index, pageSettings, zones, registerNode, isOnly }) {
           registerNode(page.id, node);
           setNodeRef(node);
         }}
-        style={{ width: pageSettings.width, height: pageSettings.height, backgroundColor: pageSettings.background || undefined }}
+        style={{
+          width: pageSettings.width,
+          height: pageSettings.height,
+          backgroundColor: pageSettings.background || undefined,
+          backgroundImage: page.backgroundImage ? `url(${page.backgroundImage})` : undefined,
+          backgroundSize: '100% 100%',
+          backgroundRepeat: 'no-repeat',
+        }}
         onClick={() => selectElement(null)}
       >
         {Object.values(zones).map((zone) => (
@@ -44,7 +51,7 @@ function Page({ page, index, pageSettings, zones, registerNode, isOnly }) {
           <CanvasElement key={el.instanceId} element={el} pageElements={page.elements} />
         ))}
 
-        {page.elements.length === 0 && (
+        {page.elements.length === 0 && !page.backgroundImage && (
           <div className="canvas-paper__empty" data-html2canvas-ignore="true">
             Drag elements from the left panel anywhere on this page — drop two side by side to place them in the same row.
           </div>

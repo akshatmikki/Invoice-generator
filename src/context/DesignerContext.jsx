@@ -48,8 +48,8 @@ function clampIntoZone(zone, y, pageHeight = PAGE_HEIGHT) {
   return Math.min(Math.max(y, bounds.yMin + 4), bounds.yMax - 24);
 }
 
-function makePage(elements = []) {
-  return { id: uuid(), elements };
+function makePage(elements = [], backgroundImage = null) {
+  return { id: uuid(), elements, backgroundImage };
 }
 
 const initialState = {
@@ -245,8 +245,12 @@ function reducer(state, action) {
       };
     }
 
-    case 'LOAD_TEMPLATE':
-      return { ...state, pages: action.payload.pages, selectedElementId: null };
+    case 'LOAD_TEMPLATE_FROM_IMAGES':
+      return {
+        ...state,
+        pages: action.payload.images.map((backgroundImage) => makePage([], backgroundImage)),
+        selectedElementId: null,
+      };
 
     case 'ADD_PAGE': {
       const newPage = makePage(action.payload?.elements || []);
@@ -265,7 +269,7 @@ function reducer(state, action) {
       if (index === -1) return state;
       const source = state.pages[index];
       const copiedElements = source.elements.map((el) => ({ ...JSON.parse(JSON.stringify(el)), instanceId: uuid() }));
-      const newPage = makePage(copiedElements);
+      const newPage = makePage(copiedElements, source.backgroundImage);
       const pages = [...state.pages];
       pages.splice(index + 1, 0, newPage);
       return { ...state, pages };
@@ -341,8 +345,9 @@ export function DesignerProvider({ children }) {
     dispatch({ type: 'BRING_TO_FRONT', payload: { instanceId } });
   }, []);
 
-  const loadTemplate = useCallback((pages) => {
-    dispatch({ type: 'LOAD_TEMPLATE', payload: { pages } });
+  // Replaces every page with one page per image, each used as a background to trace over.
+  const loadTemplateFromImages = useCallback((images) => {
+    dispatch({ type: 'LOAD_TEMPLATE_FROM_IMAGES', payload: { images } });
   }, []);
 
   const addPage = useCallback((afterPageId) => dispatch({ type: 'ADD_PAGE', payload: { afterPageId } }), []);
@@ -380,7 +385,7 @@ export function DesignerProvider({ children }) {
     updateElementData,
     selectElement,
     bringToFront,
-    loadTemplate,
+    loadTemplateFromImages,
     addPage,
     duplicatePage,
     removePage,
