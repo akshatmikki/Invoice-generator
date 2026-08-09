@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { getProductColumnDefinitions, getOrderInfoColumnDefinitions } from '../data/apiClient';
 import { formatCurrency } from '../utils/calculations';
 import { QUERYABLE_FIELDS, NUMERIC_FIELDS, OPERATORS, AGGREGATIONS, fieldType } from '../utils/query';
@@ -86,21 +87,41 @@ export function PageSetupForm({ pageSettings, onChange }) {
   );
 }
 
+/**
+ * Wraps one field/row card in the Properties panel. When its id matches the field the user just
+ * clicked on the canvas, it scrolls into view and gets a highlighted border so it's easy to find
+ * among a long list of fields.
+ */
+function FocusRow({ id, focusedFieldId, className = 'pf-product', children }) {
+  const ref = useRef(null);
+  const isFocused = !!id && id === focusedFieldId;
+  useEffect(() => {
+    if (isFocused && ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isFocused]);
+  return (
+    <div ref={ref} className={`${className} ${isFocused ? `${className}--focused` : ''}`}>
+      {children}
+    </div>
+  );
+}
+
 /** Shared "list of label/value rows with ✕ remove + + Add field" body, used by InfoBlockForm and CustomBlockForm. */
-function InfoBlockFields({ items, onUpdateItem, onAddItem, onRemoveItem }) {
+function InfoBlockFields({ items, onUpdateItem, onAddItem, onRemoveItem, focusedFieldId }) {
   return (
     <>
       <div className="pf-product-list">
         {items.map((item) => {
           const setItemStyle = (key) => makeStyleSetter(item, key, (patch) => onUpdateItem(item.id, patch));
           return (
-            <div className="pf-product" key={item.id}>
+            <FocusRow id={item.id} focusedFieldId={focusedFieldId} key={item.id}>
               <div className="pf-product__head">
                 <button type="button" className="pf-icon-btn" title="Remove field" onClick={() => onRemoveItem(item.id)}>✕</button>
               </div>
               <TextField label="Field label" value={item.label} placeholder="Field label" onChange={(v) => onUpdateItem(item.id, { label: v })} style={item.styles?.label} onStyleChange={setItemStyle('label')} />
               <TextField label="Value" value={item.value} placeholder="Value" onChange={(v) => onUpdateItem(item.id, { value: v })} style={item.styles?.value} onStyleChange={setItemStyle('value')} />
-            </div>
+            </FocusRow>
           );
         })}
       </div>
@@ -110,17 +131,17 @@ function InfoBlockFields({ items, onUpdateItem, onAddItem, onRemoveItem }) {
 }
 
 /** Company Info, Bill To, Ship To, Buyer To, Invoice Info — all backed by an apiData { title, items } catalog. */
-export function InfoBlockForm({ title, items, onChangeTitle, onUpdateItem, onAddItem, onRemoveItem, titleEditable = true }) {
+export function InfoBlockForm({ title, items, onChangeTitle, onUpdateItem, onAddItem, onRemoveItem, titleEditable = true, focusedFieldId }) {
   return (
     <div className="pf">
       {titleEditable && <Field label="Section title" value={title} placeholder="(no title shown)" onChange={onChangeTitle} />}
-      <InfoBlockFields items={items} onUpdateItem={onUpdateItem} onAddItem={onAddItem} onRemoveItem={onRemoveItem} />
+      <InfoBlockFields items={items} onUpdateItem={onUpdateItem} onAddItem={onAddItem} onRemoveItem={onRemoveItem} focusedFieldId={focusedFieldId} />
     </div>
   );
 }
 
 /** Custom Block — a blank, per-instance info block with its own title + freeform fields, stored directly in element.data. */
-export function CustomBlockForm({ data, onChange }) {
+export function CustomBlockForm({ data, onChange, focusedFieldId }) {
   const items = data.items || [];
   const addItem = () => onChange({ items: [...items, { id: uuid(), label: 'New Field', value: '' }] });
   const updateItem = (id, patch) => onChange({ items: items.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
@@ -129,12 +150,12 @@ export function CustomBlockForm({ data, onChange }) {
   return (
     <div className="pf">
       <Field label="Block title" value={data.title} onChange={(v) => onChange({ title: v })} />
-      <InfoBlockFields items={items} onUpdateItem={updateItem} onAddItem={addItem} onRemoveItem={removeItem} />
+      <InfoBlockFields items={items} onUpdateItem={updateItem} onAddItem={addItem} onRemoveItem={removeItem} focusedFieldId={focusedFieldId} />
     </div>
   );
 }
 
-export function OrderInfoTableForm({ elementData, onChange, items, onUpdateItem, onAddItem, onRemoveItem }) {
+export function OrderInfoTableForm({ elementData, onChange, items, onUpdateItem, onAddItem, onRemoveItem, focusedFieldId }) {
   const columnDefs = getOrderInfoColumnDefinitions();
   const tableStyle = elementData.tableStyle || {};
   const setTableStyle = (patch) => onChange({ tableStyle: { ...tableStyle, ...patch } });
@@ -161,14 +182,14 @@ export function OrderInfoTableForm({ elementData, onChange, items, onUpdateItem,
         {items.map((item) => {
           const setItemStyle = (key) => makeStyleSetter(item, key, (patch) => onUpdateItem(item.id, patch));
           return (
-            <div className="pf-product" key={item.id}>
+            <FocusRow id={item.id} focusedFieldId={focusedFieldId} key={item.id}>
               <div className="pf-product__head">
                 <input type="checkbox" checked={elementData.selectedRowIds.includes(item.id)} onChange={() => toggleRow(item.id)} />
                 <button type="button" className="pf-icon-btn" title="Remove row" onClick={() => onRemoveItem(item.id)}>✕</button>
               </div>
               <TextField label="Field" value={item.label} placeholder="Field name" onChange={(v) => onUpdateItem(item.id, { label: v })} style={item.styles?.label} onStyleChange={setItemStyle('label')} />
               <TextField label="Value" value={item.value} placeholder="Value" onChange={(v) => onUpdateItem(item.id, { value: v })} style={item.styles?.value} onStyleChange={setItemStyle('value')} />
-            </div>
+            </FocusRow>
           );
         })}
       </div>
@@ -275,7 +296,7 @@ const TABLE_STYLE_DEFAULTS = {
   fontSize: 12.5,
 };
 
-export function ProductTableForm({ elementData, onChange, products, currencySymbol, currencyDecimals, onUpdateProduct, onAddProduct, onRemoveProduct }) {
+export function ProductTableForm({ elementData, onChange, products, currencySymbol, currencyDecimals, onUpdateProduct, onAddProduct, onRemoveProduct, focusedFieldId }) {
   const columnDefs = getProductColumnDefinitions();
   const tableStyle = elementData.tableStyle || {};
   const setTableStyle = (patch) => onChange({ tableStyle: { ...tableStyle, ...patch } });
@@ -302,7 +323,7 @@ export function ProductTableForm({ elementData, onChange, products, currencySymb
         {products.map((p) => {
           const setProductStyle = (key) => makeStyleSetter(p, key, (patch) => onUpdateProduct(p.id, patch));
           return (
-            <div className="pf-product" key={p.id}>
+            <FocusRow id={p.id} focusedFieldId={focusedFieldId} key={p.id}>
               <div className="pf-product__head">
                 <input type="checkbox" checked={elementData.selectedProductIds.includes(p.id)} onChange={() => toggleProduct(p.id)} />
                 <button type="button" className="pf-icon-btn" title="Remove from catalog" onClick={() => onRemoveProduct(p.id)}>✕</button>
@@ -327,7 +348,7 @@ export function ProductTableForm({ elementData, onChange, products, currencySymb
                 Hazmat
               </label>
               <div className="pf-product__amount">{formatCurrency(p.qty * p.unitPrice, currencySymbol, currencyDecimals)}</div>
-            </div>
+            </FocusRow>
           );
         })}
       </div>
@@ -392,7 +413,7 @@ export function ProductTableForm({ elementData, onChange, products, currencySymb
   );
 }
 
-export function TotalsForm({ data, onChange }) {
+export function TotalsForm({ data, onChange, focusedFieldId }) {
   const tableColumns = getProductColumnDefinitions().filter((c) => c.numeric);
   const totalColumns = data.totalColumns || [];
   const extraLines = data.extraLines || [];
@@ -434,13 +455,13 @@ export function TotalsForm({ data, onChange }) {
       <p className="pf-hint">Freeform lines (e.g. Shipping Fee) added to the grand total.</p>
       <div className="pf-product-list">
         {extraLines.map((line) => (
-          <div className="pf-product" key={line.id}>
+          <FocusRow id={line.id} focusedFieldId={focusedFieldId} key={line.id}>
             <div className="pf-product__head">
               <button type="button" className="pf-icon-btn" title="Remove charge" onClick={() => removeExtraLine(line.id)}>✕</button>
             </div>
             <Field label="Label" value={line.label} onChange={(v) => updateExtraLine(line.id, { label: v })} />
             <Field label="Amount" type="number" value={line.amount} onChange={(v) => updateExtraLine(line.id, { amount: v })} />
-          </div>
+          </FocusRow>
         ))}
       </div>
       <button type="button" className="pf-add-btn" onClick={addExtraLine}>+ Add charge</button>
@@ -556,6 +577,98 @@ export function ChartForm({ data, onChange }) {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+const SHAPE_TYPES = [
+  { key: 'rectangle', label: 'Rectangle' },
+  { key: 'circle', label: 'Circle' },
+  { key: 'triangle', label: 'Triangle' },
+  { key: 'line', label: 'Line' },
+];
+
+/** Full styling for the Shape element — the "draw any shape" building block: type, fill, border, corner radius, rotation, opacity, shadow. */
+export function ShapeForm({ data, onChange }) {
+  const shapeType = data.shapeType || 'rectangle';
+
+  return (
+    <div className="pf">
+      <div className="pf-section-title">Shape</div>
+      <div className="pf-chips">
+        {SHAPE_TYPES.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`chip ${shapeType === t.key ? 'chip--active' : ''}`}
+            onClick={() => onChange({ shapeType: t.key })}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {shapeType !== 'line' && (
+        <ColorField
+          label="Fill color"
+          value={data.fill}
+          fallback="#4d6bea"
+          onChange={(v) => onChange({ fill: v })}
+          onReset={() => onChange({ fill: undefined })}
+        />
+      )}
+
+      {shapeType !== 'triangle' && (
+        <>
+          <ColorField
+            label={shapeType === 'line' ? 'Line color' : 'Border color'}
+            value={data.stroke}
+            fallback="#1f2733"
+            onChange={(v) => onChange({ stroke: v })}
+            onReset={() => onChange({ stroke: undefined })}
+          />
+          <Field
+            label={shapeType === 'line' ? 'Thickness (px)' : 'Border width (px)'}
+            type="number"
+            value={data.strokeWidth ?? 1}
+            onChange={(v) => onChange({ strokeWidth: Math.max(0, v) })}
+          />
+        </>
+      )}
+
+      {shapeType === 'rectangle' && (
+        <Field
+          label="Corner radius (px)"
+          type="number"
+          value={data.borderRadius ?? 0}
+          onChange={(v) => onChange({ borderRadius: Math.max(0, v) })}
+        />
+      )}
+
+      <label className="pf-field">
+        <span className="pf-field__label">Rotation ({data.rotation ?? 0}°)</span>
+        <input
+          type="range"
+          min="0"
+          max="360"
+          value={data.rotation ?? 0}
+          onChange={(e) => onChange({ rotation: Number(e.target.value) })}
+        />
+      </label>
+      <label className="pf-field">
+        <span className="pf-field__label">Opacity ({data.opacity ?? 100}%)</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={data.opacity ?? 100}
+          onChange={(e) => onChange({ opacity: Number(e.target.value) })}
+        />
+      </label>
+      <label className="pf-checkbox">
+        <input type="checkbox" checked={!!data.shadow} onChange={(e) => onChange({ shadow: e.target.checked })} />
+        Drop shadow
+      </label>
     </div>
   );
 }

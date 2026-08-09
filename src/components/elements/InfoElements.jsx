@@ -21,8 +21,9 @@ export function metaDisplayValue(raw) {
  * "Label : value" line. Rows with an empty value are skipped, same as the
  * old fixed-field components did.
  */
-export function InfoBlockElement({ block }) {
+export function InfoBlockElement({ block, onFieldClick }) {
   if (!block) return null;
+  const fieldClick = (id) => (onFieldClick ? (e) => { e.stopPropagation(); onFieldClick(id); } : undefined);
   return (
     <div className="el el--info">
       {block.title && <div className="el-info__label">{block.title}</div>}
@@ -31,12 +32,12 @@ export function InfoBlockElement({ block }) {
         if (!value) return null;
         const isName = item.label?.trim().toLowerCase() === 'name';
         return isName ? (
-          <div className="el-info__name" key={item.id}>
+          <div className={`el-info__name ${onFieldClick ? 'el-field--clickable' : ''}`} key={item.id} onClick={fieldClick(item.id)}>
             <Styled styles={item.styles} field="value">{value}</Styled>
           </div>
         ) : (
-          <div className="el-info__line" key={item.id}>
-            <span className="el-info__field-label">{item.label}</span> : <Styled styles={item.styles} field="value">{value}</Styled>
+          <div className={`el-info__line ${onFieldClick ? 'el-field--clickable' : ''}`} key={item.id} onClick={fieldClick(item.id)}>
+            <span className="el-info__field-label" style={styleToCss(item.styles?.label)}>{item.label}</span> : <Styled styles={item.styles} field="value">{value}</Styled>
           </div>
         );
       })}
@@ -45,22 +46,23 @@ export function InfoBlockElement({ block }) {
 }
 
 /** Invoice Info — same add/remove list as InfoBlockElement, but laid out two-per-row like a Tally-style tax invoice header. */
-export function InvoiceMetaElement({ invoiceMetaInfo }) {
+export function InvoiceMetaElement({ invoiceMetaInfo, onFieldClick }) {
   if (!invoiceMetaInfo) return null;
   const items = invoiceMetaInfo.items || [];
   const rows = [];
   for (let i = 0; i < items.length; i += 2) rows.push([items[i], items[i + 1]]);
+  const fieldClick = (id) => (onFieldClick ? (e) => { e.stopPropagation(); onFieldClick(id); } : undefined);
   return (
     <div className="el el--meta-grid">
       {rows.map(([a, b]) => (
         <div className="el-meta-grid__row" key={a.id}>
-          <div className="el-meta-grid__cell">
-            <span className="el-meta-grid__label">{a.label}</span>
+          <div className={`el-meta-grid__cell ${onFieldClick ? 'el-field--clickable' : ''}`} onClick={fieldClick(a.id)}>
+            <span className="el-meta-grid__label" style={styleToCss(a.styles?.label)}>{a.label}</span>
             <span className="el-meta-grid__value"><Styled styles={a.styles} field="value">{metaDisplayValue(a.value)}</Styled></span>
           </div>
           {b && (
-            <div className="el-meta-grid__cell">
-              <span className="el-meta-grid__label">{b.label}</span>
+            <div className={`el-meta-grid__cell ${onFieldClick ? 'el-field--clickable' : ''}`} onClick={fieldClick(b.id)}>
+              <span className="el-meta-grid__label" style={styleToCss(b.styles?.label)}>{b.label}</span>
               <span className="el-meta-grid__value"><Styled styles={b.styles} field="value">{metaDisplayValue(b.value)}</Styled></span>
             </div>
           )}

@@ -10,12 +10,14 @@ import {
   TotalsForm,
   ChartForm,
   PageSetupForm,
+  ShapeForm,
 } from './PropertiesForms';
 
 export function PropertiesPanel() {
   const {
     pages,
     selectedElementId,
+    focusedFieldId,
     updateElementData,
     resizeElement,
     resizeElementHeight,
@@ -42,6 +44,7 @@ export function PropertiesPanel() {
     onUpdateItem: (id, patch) => updateInfoItem(blockKey, id, patch),
     onAddItem: () => addInfoItem(blockKey),
     onRemoveItem: (id) => removeInfoItem(blockKey, id),
+    focusedFieldId,
     ...opts,
   });
 
@@ -106,7 +109,7 @@ export function PropertiesPanel() {
         {element.type === ELEMENT_TYPES.SHIP_TO && <InfoBlockForm {...infoBlockProps('shipTo', apiData?.shipTo)} />}
         {element.type === ELEMENT_TYPES.BUYER_TO && <InfoBlockForm {...infoBlockProps('buyerTo', apiData?.buyerTo)} />}
         {element.type === ELEMENT_TYPES.INVOICE_META && <InfoBlockForm {...infoBlockProps('invoiceMetaInfo', apiData?.invoiceMetaInfo)} />}
-        {element.type === ELEMENT_TYPES.CUSTOM_BLOCK && <CustomBlockForm data={element.data} onChange={onChange} />}
+        {element.type === ELEMENT_TYPES.CUSTOM_BLOCK && <CustomBlockForm data={element.data} onChange={onChange} focusedFieldId={focusedFieldId} />}
         {element.type === ELEMENT_TYPES.ORDER_INFO_TABLE && (
           <OrderInfoTableForm
             elementData={element.data}
@@ -115,6 +118,7 @@ export function PropertiesPanel() {
             onUpdateItem={updateOrderInfoItem}
             onAddItem={() => addOrderInfoItem(element.instanceId)}
             onRemoveItem={removeOrderInfoItem}
+            focusedFieldId={focusedFieldId}
           />
         )}
         {element.type === ELEMENT_TYPES.TEXT_BLOCK && <TextBlockForm data={element.data} onChange={onChange} />}
@@ -134,10 +138,12 @@ export function PropertiesPanel() {
             onUpdateProduct={updateProduct}
             onAddProduct={() => addProduct(element.instanceId)}
             onRemoveProduct={removeProduct}
+            focusedFieldId={focusedFieldId}
           />
         )}
-        {element.type === ELEMENT_TYPES.TOTALS && <TotalsForm data={element.data} onChange={onChange} />}
+        {element.type === ELEMENT_TYPES.TOTALS && <TotalsForm data={element.data} onChange={onChange} focusedFieldId={focusedFieldId} />}
         {element.type === ELEMENT_TYPES.CHART && <ChartForm data={element.data} onChange={onChange} />}
+        {element.type === ELEMENT_TYPES.SHAPE && <ShapeForm data={element.data} onChange={onChange} />}
       </div>
 
       <button className="properties__delete" onClick={() => removeElement(element.instanceId)}>

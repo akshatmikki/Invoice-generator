@@ -44,7 +44,7 @@ function tableStyleVars(tableStyle = {}) {
   };
 }
 
-export function ProductTableElement({ instanceId, data, products, currencySymbol, currencyDecimals = 2 }) {
+export function ProductTableElement({ instanceId, data, products, currencySymbol, currencyDecimals = 2, onFieldClick }) {
   const columnDefs = getProductColumnDefinitions();
   const visible = columnDefs.filter((c) => data.visibleColumns.includes(c.key));
   const selected = products.filter((p) => data.selectedProductIds.includes(p.id));
@@ -78,7 +78,11 @@ export function ProductTableElement({ instanceId, data, products, currencySymbol
           {selected.map((p, index) => {
             const calc = computeLineTotal(p);
             return (
-              <tr key={p.id}>
+              <tr
+                key={p.id}
+                className={onFieldClick ? 'el-field--clickable' : ''}
+                onClick={onFieldClick ? (e) => { e.stopPropagation(); onFieldClick(p.id); } : undefined}
+              >
                 <td className="align-right num">{index + 1}</td>
                 {visible.map((c) => (
                   <td key={c.key} className={numericCols.includes(c.key) ? 'align-right num' : ''}>

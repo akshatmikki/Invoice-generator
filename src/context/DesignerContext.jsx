@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { v4 as uuid } from 'uuid';
 import { fetchAllInvoiceData } from '../data/apiClient';
-import { createDefaultElementData, defaultWidthFor } from '../data/elementDefinitions';
+import { createDefaultElementData, defaultWidthFor, defaultHeightFor } from '../data/elementDefinitions';
 import { createDefaultTemplateElements } from '../data/defaultTemplate';
 
 const DesignerContext = createContext(null);
@@ -57,6 +57,9 @@ const initialState = {
   apiData: null, // { company, client, invoiceMeta, orderInfoItems, products, signatory }
   pages: [], // [{ id, elements }] — a real multi-page document, rendered top to bottom
   selectedElementId: null,
+  // Set together with selectedElementId when a specific field is clicked on the canvas (e.g. a
+  // Ship To row) so the Properties panel can scroll to and highlight that exact field's row.
+  focusedFieldId: null,
   // Taller than a standard A4 page to fit the sample freight invoice's Order/Shipment Info Table below the charges section.
   pageSettings: { preset: 'Custom', width: PAGE_WIDTH, height: 1850, background: '' },
 };
@@ -240,7 +243,7 @@ function reducer(state, action) {
         x: Math.max(0, x),
         y: clampIntoZone(zone, y, state.pageSettings.height),
         width: defaultWidthFor(elementType),
-        height: null,
+        height: defaultHeightFor(elementType),
         data: createDefaultElementData(elementType),
       };
       return {
@@ -302,7 +305,14 @@ function reducer(state, action) {
     }
 
     case 'SELECT_ELEMENT':
-      return { ...state, selectedElementId: action.payload };
+      return { ...state, selectedElementId: action.payload, focusedFieldId: null };
+
+    // Selects the element AND marks one specific field within it (e.g. clicking "Shipper
+    // Address" on the canvas) so the Properties panel can jump straight to that field's row.
+    case 'FOCUS_FIELD': {
+      const { instanceId, fieldId } = action.payload;
+      return { ...state, selectedElementId: instanceId, focusedFieldId: fieldId };
+    }
 
     case 'BRING_TO_FRONT': {
       const { instanceId } = action.payload;
@@ -412,6 +422,10 @@ export function DesignerProvider({ children }) {
     dispatch({ type: 'SELECT_ELEMENT', payload: instanceId });
   }, []);
 
+  const focusField = useCallback((instanceId, fieldId) => {
+    dispatch({ type: 'FOCUS_FIELD', payload: { instanceId, fieldId } });
+  }, []);
+
   const bringToFront = useCallback((instanceId) => {
     dispatch({ type: 'BRING_TO_FRONT', payload: { instanceId } });
   }, []);
@@ -467,6 +481,7 @@ export function DesignerProvider({ children }) {
     updatePageSettings,
     updateElementData,
     selectElement,
+    focusField,
     bringToFront,
     loadTemplateFromImages,
     addPage,

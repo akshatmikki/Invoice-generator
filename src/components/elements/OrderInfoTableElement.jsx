@@ -18,7 +18,7 @@ function tableStyleVars(tableStyle = {}) {
  * on/off, editable inline, toggleable columns) so it behaves like it,
  * instead of being crammed into the Tally-style Invoice Info box.
  */
-export function OrderInfoTableElement({ data, items }) {
+export function OrderInfoTableElement({ data, items, onFieldClick }) {
   const columnDefs = getOrderInfoColumnDefinitions();
   const visible = columnDefs.filter((c) => data.visibleColumns.includes(c.key));
   const selected = items.filter((item) => data.selectedRowIds.includes(item.id));
@@ -45,7 +45,11 @@ export function OrderInfoTableElement({ data, items }) {
         </thead>
         <tbody>
           {selected.map((item, index) => (
-            <tr key={item.id}>
+            <tr
+              key={item.id}
+              className={onFieldClick ? 'el-field--clickable' : ''}
+              onClick={onFieldClick ? (e) => { e.stopPropagation(); onFieldClick(item.id); } : undefined}
+            >
               <td className="align-right num">{index + 1}</td>
               {visible.map((c) => (
                 <td key={c.key}>

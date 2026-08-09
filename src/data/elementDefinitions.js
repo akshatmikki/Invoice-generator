@@ -24,6 +24,7 @@ export const ELEMENT_TYPES = {
   SIGNATURE: 'SIGNATURE',
   DIVIDER: 'DIVIDER',
   CUSTOM_BLOCK: 'CUSTOM_BLOCK',
+  SHAPE: 'SHAPE',
 };
 
 export const elementPalette = [
@@ -65,6 +66,7 @@ export const elementPalette = [
     group: 'Custom',
     items: [
       { type: ELEMENT_TYPES.CUSTOM_BLOCK, label: 'Custom Block', hint: 'Blank block — add your own title and fields', allowedZones: ['header', 'main', 'footer'], defaultWidth: 260 },
+      { type: ELEMENT_TYPES.SHAPE, label: 'Shape', hint: 'Rectangle, circle, triangle or line — fully customizable fill, border, corners, rotation & opacity', allowedZones: ['header', 'main', 'footer'], defaultWidth: 160, defaultHeight: 120 },
     ],
   },
 ];
@@ -79,6 +81,11 @@ export function findPaletteDefinition(type) {
 
 export function defaultWidthFor(type) {
   return findPaletteDefinition(type)?.defaultWidth ?? 260;
+}
+
+/** Most elements auto-fit their height to content (null = auto); a few (like Shape) need an explicit starting height. */
+export function defaultHeightFor(type) {
+  return findPaletteDefinition(type)?.defaultHeight ?? null;
 }
 
 /** Default per-instance settings created when an element is dropped on the canvas. */
@@ -115,6 +122,8 @@ export function createDefaultElementData(type) {
       return { style: 'solid' };
     case ELEMENT_TYPES.CUSTOM_BLOCK:
       return { title: 'Custom Block', items: [] };
+    case ELEMENT_TYPES.SHAPE:
+      return { shapeType: 'rectangle', fill: '#4d6bea', stroke: '#1f2733', strokeWidth: 1, borderRadius: 6, rotation: 0, opacity: 100, shadow: false };
     default:
       return {};
   }

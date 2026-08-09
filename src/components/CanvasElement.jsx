@@ -8,6 +8,7 @@ import { ProductTableElement } from './elements/ProductTableElement';
 import { TotalsElement } from './elements/TotalsElement';
 import { ChartElement } from './elements/ChartElement';
 import { TextBlockElement, DividerElement } from './elements/TextAndDivider';
+import { ShapeElement } from './elements/ShapeElement';
 
 const MIN_WIDTH = 60;
 const MIN_HEIGHT = 28;
@@ -16,6 +17,7 @@ export function CanvasElement({ element, pageElements }) {
   const {
     selectedElementId,
     selectElement,
+    focusField,
     removeElement,
     moveElement,
     resizeElement,
@@ -33,6 +35,7 @@ export function CanvasElement({ element, pageElements }) {
   const elRef = useRef(null);
 
   const onChange = (patch) => updateElementData(element.instanceId, patch);
+  const onFocusField = useCallback((fieldId) => focusField(element.instanceId, fieldId), [element.instanceId, focusField]);
 
   const handleSelect = (e) => {
     e.stopPropagation();
@@ -141,7 +144,7 @@ export function CanvasElement({ element, pageElements }) {
       </div>
 
       <div className="canvas-el__body" style={element.height ? { overflow: 'auto' } : undefined}>
-        {renderElement(element, { onChange, apiData, elements: pageElements })}
+        {renderElement(element, { onChange, apiData, elements: pageElements, onFocusField })}
       </div>
 
       <div
@@ -174,7 +177,7 @@ export function CanvasElement({ element, pageElements }) {
   );
 }
 
-function renderElement(element, { onChange, apiData, elements }) {
+function renderElement(element, { onChange, apiData, elements, onFocusField }) {
   const { type, data, instanceId } = element;
   const currencySymbol = apiData?.invoiceMeta?.currencySymbol ?? '₹';
   const currencyDecimals = apiData?.invoiceMeta?.currencyDecimals ?? 2;
@@ -187,19 +190,19 @@ function renderElement(element, { onChange, apiData, elements }) {
     case ELEMENT_TYPES.SIGNATURE:
       return <SignatureElement data={data} onChange={onChange} />;
     case ELEMENT_TYPES.COMPANY_INFO:
-      return <InfoBlockElement block={apiData?.company} />;
+      return <InfoBlockElement block={apiData?.company} onFieldClick={onFocusField} />;
     case ELEMENT_TYPES.CLIENT_INFO:
-      return <InfoBlockElement block={apiData?.billTo} />;
+      return <InfoBlockElement block={apiData?.billTo} onFieldClick={onFocusField} />;
     case ELEMENT_TYPES.SHIP_TO:
-      return <InfoBlockElement block={apiData?.shipTo} />;
+      return <InfoBlockElement block={apiData?.shipTo} onFieldClick={onFocusField} />;
     case ELEMENT_TYPES.BUYER_TO:
-      return <InfoBlockElement block={apiData?.buyerTo} />;
+      return <InfoBlockElement block={apiData?.buyerTo} onFieldClick={onFocusField} />;
     case ELEMENT_TYPES.INVOICE_META:
-      return <InvoiceMetaElement invoiceMetaInfo={apiData?.invoiceMetaInfo} />;
+      return <InvoiceMetaElement invoiceMetaInfo={apiData?.invoiceMetaInfo} onFieldClick={onFocusField} />;
     case ELEMENT_TYPES.CUSTOM_BLOCK:
-      return <InfoBlockElement block={{ title: data.title, items: data.items || [] }} />;
+      return <InfoBlockElement block={{ title: data.title, items: data.items || [] }} onFieldClick={onFocusField} />;
     case ELEMENT_TYPES.ORDER_INFO_TABLE:
-      return <OrderInfoTableElement data={data} items={apiData?.orderInfoItems || []} />;
+      return <OrderInfoTableElement data={data} items={apiData?.orderInfoItems || []} onFieldClick={onFocusField} />;
     case ELEMENT_TYPES.PRODUCT_TABLE:
       return (
         <ProductTableElement
@@ -208,6 +211,7 @@ function renderElement(element, { onChange, apiData, elements }) {
           products={apiData?.products || []}
           currencySymbol={currencySymbol}
           currencyDecimals={currencyDecimals}
+          onFieldClick={onFocusField}
         />
       );
     case ELEMENT_TYPES.TOTALS: {
@@ -220,6 +224,7 @@ function renderElement(element, { onChange, apiData, elements }) {
           selectedProductIds={selectedProductIds}
           currencySymbol={currencySymbol}
           currencyDecimals={currencyDecimals}
+          onFieldClick={onFocusField}
         />
       );
     }
@@ -229,6 +234,8 @@ function renderElement(element, { onChange, apiData, elements }) {
       return <ChartElement data={data} products={apiData?.products || []} currencySymbol={currencySymbol} />;
     case ELEMENT_TYPES.DIVIDER:
       return <DividerElement />;
+    case ELEMENT_TYPES.SHAPE:
+      return <ShapeElement data={data} />;
     default:
       return <div className="el">Unknown element</div>;
   }

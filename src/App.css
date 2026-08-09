@@ -656,6 +656,30 @@
   margin: 4px 0;
 }
 
+/* Any field the user can click on the canvas to jump straight to it in the Properties panel. */
+.el-field--clickable {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 0.12s ease;
+}
+
+.el-field--clickable:hover {
+  background-color: var(--accent-100);
+}
+
+tr.el-field--clickable:hover td {
+  background-color: var(--accent-100);
+}
+
+/* ---------------- Shape element ---------------- */
+.el--shape {
+  box-sizing: border-box;
+}
+
+.el--shape-line {
+  border-radius: 999px;
+}
+
 .el-footnote {
   font-size: 10.5px;
   color: var(--slate-500);
@@ -1124,6 +1148,17 @@
   border: 1px solid var(--ink-700);
   border-radius: var(--radius-md);
   padding: 10px;
+}
+
+.pf-product--focused {
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 2px var(--accent-100);
+  animation: pf-focus-flash 1.4s ease;
+}
+
+@keyframes pf-focus-flash {
+  0% { background: var(--accent-600); }
+  100% { background: var(--ink-800); }
 }
 
 .pf-product__head {

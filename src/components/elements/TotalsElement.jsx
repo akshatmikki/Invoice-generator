@@ -11,7 +11,7 @@ const COLUMN_TOTAL_DEFS = [
   { key: 'lineTotal', label: 'Total Line Total', compute: (items) => sumColumn(items, 'lineTotal'), isCurrency: true },
 ];
 
-export function TotalsElement({ instanceId, data, products, selectedProductIds, currencySymbol, currencyDecimals = 2 }) {
+export function TotalsElement({ instanceId, data, products, selectedProductIds, currencySymbol, currencyDecimals = 2, onFieldClick }) {
   const totals = computeInvoiceTotals(products, selectedProductIds, data.extraDiscountPercent, data.extraTaxPercent, data.extraLines);
   const hasProducts = selectedProductIds.length > 0;
   const totalColumns = data.totalColumns || [];
@@ -93,7 +93,11 @@ export function TotalsElement({ instanceId, data, products, selectedProductIds, 
               })}
               {extraLines.length > 0 && <div className="totals-divider" />}
               {extraLines.map((line) => (
-                <div className="totals-row" key={line.id}>
+                <div
+                  className={`totals-row ${onFieldClick ? 'el-field--clickable' : ''}`}
+                  key={line.id}
+                  onClick={onFieldClick ? (e) => { e.stopPropagation(); onFieldClick(line.id); } : undefined}
+                >
                   <span>{line.label}</span>
                   <span className="num">{formatCurrency(Number(line.amount) || 0, currencySymbol, currencyDecimals)}</span>
                 </div>
