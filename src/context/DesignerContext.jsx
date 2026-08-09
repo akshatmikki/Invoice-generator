@@ -87,14 +87,39 @@ function reducer(state, action) {
         selectedElementId: null,
       };
 
-    case 'UPDATE_COMPANY':
-      return { ...state, apiData: { ...state.apiData, company: { ...state.apiData.company, ...action.payload } } };
+    // Generic info-block editing (Company Info, Bill To, Ship To, Buyer To, Invoice Info) — each
+    // apiData[blockKey] is a { title, items: [{id,label,value}] } catalog, same row shape as
+    // orderInfoItems/products, but with no selectedRowIds indirection since each of these blocks
+    // maps 1:1 to a single element on the canvas.
+    case 'UPDATE_INFO_BLOCK_TITLE': {
+      const { blockKey, title } = action.payload;
+      return { ...state, apiData: { ...state.apiData, [blockKey]: { ...state.apiData[blockKey], title } } };
+    }
 
-    case 'UPDATE_CLIENT':
-      return { ...state, apiData: { ...state.apiData, client: { ...state.apiData.client, ...action.payload } } };
+    case 'ADD_INFO_ITEM': {
+      const { blockKey } = action.payload;
+      const block = state.apiData[blockKey];
+      const newItem = { id: uuid(), label: 'New Field', value: '' };
+      return { ...state, apiData: { ...state.apiData, [blockKey]: { ...block, items: [...block.items, newItem] } } };
+    }
 
-    case 'UPDATE_INVOICE_META':
-      return { ...state, apiData: { ...state.apiData, invoiceMeta: { ...state.apiData.invoiceMeta, ...action.payload } } };
+    case 'UPDATE_INFO_ITEM': {
+      const { blockKey, itemId, patch } = action.payload;
+      const block = state.apiData[blockKey];
+      return {
+        ...state,
+        apiData: {
+          ...state.apiData,
+          [blockKey]: { ...block, items: block.items.map((item) => (item.id === itemId ? { ...item, ...patch } : item)) },
+        },
+      };
+    }
+
+    case 'REMOVE_INFO_ITEM': {
+      const { blockKey, itemId } = action.payload;
+      const block = state.apiData[blockKey];
+      return { ...state, apiData: { ...state.apiData, [blockKey]: { ...block, items: block.items.filter((item) => item.id !== itemId) } } };
+    }
 
     case 'UPDATE_ORDER_INFO_ITEM': {
       const { itemId, patch } = action.payload;
@@ -405,10 +430,12 @@ export function DesignerProvider({ children }) {
     fetchAllInvoiceData().then((payload) => dispatch({ type: 'RESET_TO_SAMPLE', payload }));
   }, []);
 
-  const updateCompany = useCallback((patch) => dispatch({ type: 'UPDATE_COMPANY', payload: patch }), []);
-  const updateClient = useCallback((patch) => dispatch({ type: 'UPDATE_CLIENT', payload: patch }), []);
-  const updateInvoiceMeta = useCallback((patch) => dispatch({ type: 'UPDATE_INVOICE_META', payload: patch }), []);
   const updateSignatory = useCallback((patch) => dispatch({ type: 'UPDATE_SIGNATORY', payload: patch }), []);
+
+  const updateInfoBlockTitle = useCallback((blockKey, title) => dispatch({ type: 'UPDATE_INFO_BLOCK_TITLE', payload: { blockKey, title } }), []);
+  const addInfoItem = useCallback((blockKey) => dispatch({ type: 'ADD_INFO_ITEM', payload: { blockKey } }), []);
+  const updateInfoItem = useCallback((blockKey, itemId, patch) => dispatch({ type: 'UPDATE_INFO_ITEM', payload: { blockKey, itemId, patch } }), []);
+  const removeInfoItem = useCallback((blockKey, itemId) => dispatch({ type: 'REMOVE_INFO_ITEM', payload: { blockKey, itemId } }), []);
 
   const updateProduct = useCallback((productId, patch) => {
     dispatch({ type: 'UPDATE_PRODUCT', payload: { productId, patch } });
@@ -447,10 +474,11 @@ export function DesignerProvider({ children }) {
     removePage,
     clearPage,
     resetToSample,
-    updateCompany,
-    updateClient,
-    updateInvoiceMeta,
     updateSignatory,
+    updateInfoBlockTitle,
+    addInfoItem,
+    updateInfoItem,
+    removeInfoItem,
     updateProduct,
     addProduct,
     removeProduct,

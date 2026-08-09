@@ -59,8 +59,11 @@ function DataTab() {
         on the page; this panel is just a read-only preview of the current values.
       </p>
       <JsonBlock title="company" value={apiData.company} />
-      <JsonBlock title="client" value={apiData.client} />
+      <JsonBlock title="billTo" value={apiData.billTo} />
+      <JsonBlock title="shipTo" value={apiData.shipTo} />
+      <JsonBlock title="buyerTo" value={apiData.buyerTo} />
       <JsonBlock title="invoiceMeta" value={apiData.invoiceMeta} />
+      <JsonBlock title="invoiceMetaInfo" value={apiData.invoiceMetaInfo} />
       <JsonBlock title={`products (${apiData.products.length})`} value={apiData.products} />
       <JsonBlock title="signatory" value={apiData.signatory} />
     </>

@@ -1,7 +1,10 @@
 import {
-  mockCompany,
-  mockClient,
+  mockCompanyInfo,
+  mockBillTo,
+  mockShipTo,
+  mockBuyerTo,
   mockInvoiceMeta,
+  mockInvoiceMetaInfo,
   mockOrderInfoItems,
   mockProducts,
   mockSignatory,
@@ -19,8 +22,11 @@ import {
  *  3. Make sure the .NET API exposes these routes returning the same
  *     JSON shape as src/data/mockApiData.js:
  *       GET /api/company
- *       GET /api/client
+ *       GET /api/bill-to
+ *       GET /api/ship-to
+ *       GET /api/buyer-to
  *       GET /api/invoice-meta
+ *       GET /api/invoice-meta-info
  *       GET /api/order-info
  *       GET /api/products
  *       GET /api/signatory
@@ -37,16 +43,29 @@ async function getJson(path) {
   return res.json();
 }
 
-export async function fetchCompany() {
-  return USE_STATIC_DATA ? Promise.resolve(mockCompany) : getJson('/api/company');
+export async function fetchCompanyInfo() {
+  return USE_STATIC_DATA ? Promise.resolve(mockCompanyInfo) : getJson('/api/company');
 }
 
-export async function fetchClient() {
-  return USE_STATIC_DATA ? Promise.resolve(mockClient) : getJson('/api/client');
+export async function fetchBillTo() {
+  return USE_STATIC_DATA ? Promise.resolve(mockBillTo) : getJson('/api/bill-to');
 }
 
+export async function fetchShipTo() {
+  return USE_STATIC_DATA ? Promise.resolve(mockShipTo) : getJson('/api/ship-to');
+}
+
+export async function fetchBuyerTo() {
+  return USE_STATIC_DATA ? Promise.resolve(mockBuyerTo) : getJson('/api/buyer-to');
+}
+
+/** Currency settings only (symbol/decimals) — consumed by the calculation engine, not an editable field list. */
 export async function fetchInvoiceMeta() {
   return USE_STATIC_DATA ? Promise.resolve(mockInvoiceMeta) : getJson('/api/invoice-meta');
+}
+
+export async function fetchInvoiceMetaInfo() {
+  return USE_STATIC_DATA ? Promise.resolve(mockInvoiceMetaInfo) : getJson('/api/invoice-meta-info');
 }
 
 /** Freight order & shipment rows shown in the Order/Shipment Info Table element (see OrderInfoTableElement.jsx) — same list/row shape as products. */
@@ -73,13 +92,16 @@ export function getProductColumnDefinitions() {
 }
 
 export async function fetchAllInvoiceData() {
-  const [company, client, invoiceMeta, orderInfoItems, products, signatory] = await Promise.all([
-    fetchCompany(),
-    fetchClient(),
+  const [company, billTo, shipTo, buyerTo, invoiceMeta, invoiceMetaInfo, orderInfoItems, products, signatory] = await Promise.all([
+    fetchCompanyInfo(),
+    fetchBillTo(),
+    fetchShipTo(),
+    fetchBuyerTo(),
     fetchInvoiceMeta(),
+    fetchInvoiceMetaInfo(),
     fetchOrderInfoItems(),
     fetchProducts(),
     fetchSignatory(),
   ]);
-  return { company, client, invoiceMeta, orderInfoItems, products, signatory };
+  return { company, billTo, shipTo, buyerTo, invoiceMeta, invoiceMetaInfo, orderInfoItems, products, signatory };
 }

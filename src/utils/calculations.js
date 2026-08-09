@@ -19,7 +19,7 @@ export function computeLineTotal(product) {
  * Product Table element, plus any extra invoice-wide discount/tax set on
  * the Totals element.
  */
-export function computeInvoiceTotals(products, selectedProductIds, extraDiscountPercent = 0, extraTaxPercent = 0) {
+export function computeInvoiceTotals(products, selectedProductIds, extraDiscountPercent = 0, extraTaxPercent = 0, extraLines = []) {
   const items = products
     .filter((p) => selectedProductIds.includes(p.id))
     .map((p) => ({ ...p, ...computeLineTotal(p) }));
@@ -32,8 +32,9 @@ export function computeInvoiceTotals(products, selectedProductIds, extraDiscount
   const extraDiscountAmt = round2(afterLineDiscount * (extraDiscountPercent / 100));
   const taxableBase = round2(afterLineDiscount - extraDiscountAmt);
   const extraTaxAmt = round2(taxableBase * (extraTaxPercent / 100));
+  const extraLinesTotal = round2(extraLines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0));
 
-  const grandTotal = round2(taxableBase + totalLineTax + extraTaxAmt);
+  const grandTotal = round2(taxableBase + totalLineTax + extraTaxAmt + extraLinesTotal);
 
   return {
     items,
@@ -43,6 +44,7 @@ export function computeInvoiceTotals(products, selectedProductIds, extraDiscount
     extraDiscountAmt,
     extraTaxAmt,
     taxableBase,
+    extraLinesTotal,
     grandTotal,
   };
 }

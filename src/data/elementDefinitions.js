@@ -12,6 +12,8 @@ export const ELEMENT_TYPES = {
   LOGO: 'LOGO',
   COMPANY_INFO: 'COMPANY_INFO',
   CLIENT_INFO: 'CLIENT_INFO',
+  SHIP_TO: 'SHIP_TO',
+  BUYER_TO: 'BUYER_TO',
   INVOICE_META: 'INVOICE_META',
   ORDER_INFO_TABLE: 'ORDER_INFO_TABLE',
   PRODUCT_TABLE: 'PRODUCT_TABLE',
@@ -21,6 +23,7 @@ export const ELEMENT_TYPES = {
   IMAGE: 'IMAGE',
   SIGNATURE: 'SIGNATURE',
   DIVIDER: 'DIVIDER',
+  CUSTOM_BLOCK: 'CUSTOM_BLOCK',
 };
 
 export const elementPalette = [
@@ -36,6 +39,8 @@ export const elementPalette = [
     items: [
       { type: ELEMENT_TYPES.COMPANY_INFO, label: 'Your Company Details', hint: 'Name, address, email, tax ID', allowedZones: ['header', 'main'], defaultWidth: 260 },
       { type: ELEMENT_TYPES.CLIENT_INFO, label: 'Bill To (Client Details)', hint: 'Client name & billing address', allowedZones: ['header', 'main'], defaultWidth: 260 },
+      { type: ELEMENT_TYPES.SHIP_TO, label: 'Ship To (Shipping Details)', hint: 'Shipping name & address', allowedZones: ['header', 'main'], defaultWidth: 260 },
+      { type: ELEMENT_TYPES.BUYER_TO, label: 'Buyer To (Buyer Details)', hint: 'Buyer name & address', allowedZones: ['header', 'main'], defaultWidth: 260 },
       { type: ELEMENT_TYPES.INVOICE_META, label: 'Invoice Info', hint: 'Invoice #, date, due date, PO #', allowedZones: ['header', 'main'], defaultWidth: 240 },
       { type: ELEMENT_TYPES.ORDER_INFO_TABLE, label: 'Order / Shipment Info Table', hint: 'Order #, dates, truck/driver/trailer/carrier, shipper & consignee', allowedZones: ['main'], defaultWidth: 750 },
     ],
@@ -54,6 +59,12 @@ export const elementPalette = [
       { type: ELEMENT_TYPES.TEXT_BLOCK, label: 'Text Block', hint: 'Notes, terms, thank-you message', allowedZones: ['header', 'main', 'footer'], defaultWidth: 300 },
       { type: ELEMENT_TYPES.SIGNATURE, label: 'Signature / Stamp', hint: 'Upload a signature or stamp image', allowedZones: ['main', 'footer'], defaultWidth: 180 },
       { type: ELEMENT_TYPES.DIVIDER, label: 'Divider Line', hint: 'Visually separate sections', allowedZones: ['header', 'main', 'footer'], defaultWidth: 700 },
+    ],
+  },
+  {
+    group: 'Custom',
+    items: [
+      { type: ELEMENT_TYPES.CUSTOM_BLOCK, label: 'Custom Block', hint: 'Blank block — add your own title and fields', allowedZones: ['header', 'main', 'footer'], defaultWidth: 260 },
     ],
   },
 ];
@@ -82,7 +93,7 @@ export function createDefaultElementData(type) {
     case ELEMENT_TYPES.ORDER_INFO_TABLE:
       return { selectedRowIds: [], visibleColumns: ['label', 'value'], tableStyle: {} };
     case ELEMENT_TYPES.TOTALS:
-      return { extraDiscountPercent: 0, extraTaxPercent: 0, showBreakdown: true, totalColumns: [] };
+      return { extraDiscountPercent: 0, extraTaxPercent: 0, showBreakdown: true, totalColumns: [], extraLines: [] };
     case ELEMENT_TYPES.CHART:
       return {
         title: 'Spend by Category',
@@ -102,6 +113,8 @@ export function createDefaultElementData(type) {
       return { imageData: null, label: 'Authorized Signatory', styles: {} };
     case ELEMENT_TYPES.DIVIDER:
       return { style: 'solid' };
+    case ELEMENT_TYPES.CUSTOM_BLOCK:
+      return { title: 'Custom Block', items: [] };
     default:
       return {};
   }

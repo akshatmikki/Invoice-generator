@@ -1,9 +1,8 @@
 import { useDesigner, findElementAcrossPages } from '../context/DesignerContext';
 import { ELEMENT_TYPES, findPaletteDefinition } from '../data/elementDefinitions';
 import {
-  CompanyInfoForm,
-  ClientInfoForm,
-  InvoiceMetaForm,
+  InfoBlockForm,
+  CustomBlockForm,
   OrderInfoTableForm,
   TextBlockForm,
   CaptionForm,
@@ -24,9 +23,10 @@ export function PropertiesPanel() {
     apiData,
     pageSettings,
     updatePageSettings,
-    updateCompany,
-    updateClient,
-    updateInvoiceMeta,
+    updateInfoBlockTitle,
+    addInfoItem,
+    updateInfoItem,
+    removeInfoItem,
     updateProduct,
     addProduct,
     removeProduct,
@@ -34,6 +34,16 @@ export function PropertiesPanel() {
     addOrderInfoItem,
     removeOrderInfoItem,
   } = useDesigner();
+
+  const infoBlockProps = (blockKey, block, opts = {}) => ({
+    title: block?.title,
+    items: block?.items || [],
+    onChangeTitle: (v) => updateInfoBlockTitle(blockKey, v),
+    onUpdateItem: (id, patch) => updateInfoItem(blockKey, id, patch),
+    onAddItem: () => addInfoItem(blockKey),
+    onRemoveItem: (id) => removeInfoItem(blockKey, id),
+    ...opts,
+  });
 
   if (!selectedElementId) {
     return (
@@ -91,9 +101,12 @@ export function PropertiesPanel() {
       </div>
 
       <div className="properties__section">
-        {element.type === ELEMENT_TYPES.COMPANY_INFO && <CompanyInfoForm company={apiData?.company} onChange={updateCompany} />}
-        {element.type === ELEMENT_TYPES.CLIENT_INFO && <ClientInfoForm client={apiData?.client} onChange={updateClient} />}
-        {element.type === ELEMENT_TYPES.INVOICE_META && <InvoiceMetaForm invoiceMeta={apiData?.invoiceMeta} onChange={updateInvoiceMeta} />}
+        {element.type === ELEMENT_TYPES.COMPANY_INFO && <InfoBlockForm {...infoBlockProps('company', apiData?.company)} />}
+        {element.type === ELEMENT_TYPES.CLIENT_INFO && <InfoBlockForm {...infoBlockProps('billTo', apiData?.billTo)} />}
+        {element.type === ELEMENT_TYPES.SHIP_TO && <InfoBlockForm {...infoBlockProps('shipTo', apiData?.shipTo)} />}
+        {element.type === ELEMENT_TYPES.BUYER_TO && <InfoBlockForm {...infoBlockProps('buyerTo', apiData?.buyerTo)} />}
+        {element.type === ELEMENT_TYPES.INVOICE_META && <InfoBlockForm {...infoBlockProps('invoiceMetaInfo', apiData?.invoiceMetaInfo)} />}
+        {element.type === ELEMENT_TYPES.CUSTOM_BLOCK && <CustomBlockForm data={element.data} onChange={onChange} />}
         {element.type === ELEMENT_TYPES.ORDER_INFO_TABLE && (
           <OrderInfoTableForm
             elementData={element.data}

@@ -19,52 +19,85 @@
  * ------------------------------------------------------------------
  */
 
-export const mockCompany = {
-  id: 'company-001',
-  name: 'Ali & Co',
-  addressLine1: 'West Gate, High Street',
-  addressLine2: 'Muscat',
-  email: '',
-  phone: '',
-  website: '',
-  taxId: 'VATIN : AA1234567890',
-  logoUrl: null, // layman uploads this via the Image Upload panel
+/**
+ * "Info block" shape shared by Company Info, Bill To, Ship To, Buyer To
+ * and Invoice Info: a title plus a freely add/remove-able list of
+ * { id, label, value } fields — same row shape as mockOrderInfoItems, so
+ * every one of these blocks supports the same +/✕ editing in the panel.
+ */
+export const mockCompanyInfo = {
+  title: '',
+  items: [
+    { id: 'ci1', label: 'Name', value: 'Ali & Co' },
+    { id: 'ci2', label: 'Address Line 1', value: 'West Gate, High Street' },
+    { id: 'ci3', label: 'Address Line 2', value: 'Muscat' },
+    { id: 'ci4', label: 'Email', value: '' },
+    { id: 'ci5', label: 'Phone', value: '' },
+    { id: 'ci6', label: 'Tax ID / VATIN', value: 'VATIN : AA1234567890' },
+  ],
 };
 
-export const mockClient = {
-  id: 'client-001',
-  name: 'Max Enterprises',
-  billingAddress: 'Centre Point Mall, New Street, Muscat',
-  shippingAddress: 'Centre Point Mall, New Street, Muscat',
-  email: '',
-  phone: '',
-  country: 'Sultanate of Oman',
-  taxId: 'AS0987654321',
-  placeOfSupply: 'Sultanate of Oman',
+export const mockBillTo = {
+  title: 'Buyer',
+  items: [
+    { id: 'bt1', label: 'Name', value: 'Max Enterprises' },
+    { id: 'bt2', label: 'Billing Address', value: 'Centre Point Mall, New Street, Muscat' },
+    { id: 'bt3', label: 'Email', value: '' },
+    { id: 'bt4', label: 'Phone', value: '' },
+    { id: 'bt5', label: 'Country', value: 'Sultanate of Oman' },
+    { id: 'bt6', label: 'VATIN', value: 'AS0987654321' },
+    { id: 'bt7', label: 'Place of Supply', value: 'Sultanate of Oman' },
+  ],
 };
 
+/** Same shape as Bill To — seeded from the client's shipping address. */
+export const mockShipTo = {
+  title: 'Ship To',
+  items: [
+    { id: 'st1', label: 'Name', value: 'Max Enterprises' },
+    { id: 'st2', label: 'Shipping Address', value: 'Centre Point Mall, New Street, Muscat' },
+    { id: 'st3', label: 'Email', value: '' },
+    { id: 'st4', label: 'Phone', value: '' },
+    { id: 'st5', label: 'Country', value: 'Sultanate of Oman' },
+  ],
+};
+
+/** Same shape as Bill To — a distinct buyer entity, blank by default until filled in. */
+export const mockBuyerTo = {
+  title: 'Buyer To',
+  items: [
+    { id: 'by1', label: 'Name', value: '' },
+    { id: 'by2', label: 'Address', value: '' },
+    { id: 'by3', label: 'Email', value: '' },
+    { id: 'by4', label: 'Phone', value: '' },
+  ],
+};
+
+/** Tally-style tax invoice header fields — rendered two-per-row. Add/remove-able like the other info blocks. */
+export const mockInvoiceMetaInfo = {
+  title: 'Invoice Info',
+  items: [
+    { id: 'im1', label: 'Invoice No.', value: '1' },
+    { id: 'im2', label: 'Dated', value: '11-Nov-21' },
+    { id: 'im3', label: 'Delivery Note', value: '' },
+    { id: 'im4', label: 'Mode/Terms of Payment', value: '' },
+    { id: 'im5', label: "Supplier's Ref.", value: '' },
+    { id: 'im6', label: 'Other Reference(s)', value: '' },
+    { id: 'im7', label: "Buyer's Order No.", value: '' },
+    { id: 'im8', label: 'Dated', value: '' },
+    { id: 'im9', label: 'Despatch Document No.', value: '' },
+    { id: 'im10', label: 'Delivery Note Date', value: '' },
+    { id: 'im11', label: 'Despatched through', value: '' },
+    { id: 'im12', label: 'Destination', value: '' },
+    { id: 'im13', label: 'Terms of Delivery', value: '' },
+  ],
+};
+
+/** Currency settings the calculation engine relies on — not part of the add/remove field list. */
 export const mockInvoiceMeta = {
-  invoiceNumber: '1',
-  invoiceDate: '11-Nov-21',
-  dueDate: '',
-  poNumber: '',
-  paymentTerms: '',
   currency: 'OMR',
   currencySymbol: '',
   currencyDecimals: 3,
-  // Extra dispatch/reference fields shown on a Tally-style tax invoice header —
-  // all optional, blank ones simply render an empty value the layman can fill in.
-  deliveryNote: '',
-  modeOfPayment: '',
-  supplierRef: '',
-  otherReference: '',
-  buyersOrderNo: '',
-  buyersOrderDate: '',
-  despatchDocNo: '',
-  deliveryNoteDate: '',
-  despatchedThrough: '',
-  destination: '',
-  termsOfDelivery: '',
 };
 
 /**

@@ -1,6 +1,5 @@
 import { getProductColumnDefinitions, getOrderInfoColumnDefinitions } from '../data/apiClient';
 import { formatCurrency } from '../utils/calculations';
-import { META_ROWS, metaDisplayValue } from './elements/InfoElements';
 import { QUERYABLE_FIELDS, NUMERIC_FIELDS, OPERATORS, AGGREGATIONS, fieldType } from '../utils/query';
 import { makeStyleSetter } from '../utils/textStyle';
 import { TextField } from './TextField';
@@ -87,53 +86,50 @@ export function PageSetupForm({ pageSettings, onChange }) {
   );
 }
 
-export function CompanyInfoForm({ company, onChange }) {
-  if (!company) return null;
-  const setStyle = (key) => makeStyleSetter(company, key, onChange);
+/** Shared "list of label/value rows with ✕ remove + + Add field" body, used by InfoBlockForm and CustomBlockForm. */
+function InfoBlockFields({ items, onUpdateItem, onAddItem, onRemoveItem }) {
+  return (
+    <>
+      <div className="pf-product-list">
+        {items.map((item) => {
+          const setItemStyle = (key) => makeStyleSetter(item, key, (patch) => onUpdateItem(item.id, patch));
+          return (
+            <div className="pf-product" key={item.id}>
+              <div className="pf-product__head">
+                <button type="button" className="pf-icon-btn" title="Remove field" onClick={() => onRemoveItem(item.id)}>✕</button>
+              </div>
+              <TextField label="Field label" value={item.label} placeholder="Field label" onChange={(v) => onUpdateItem(item.id, { label: v })} style={item.styles?.label} onStyleChange={setItemStyle('label')} />
+              <TextField label="Value" value={item.value} placeholder="Value" onChange={(v) => onUpdateItem(item.id, { value: v })} style={item.styles?.value} onStyleChange={setItemStyle('value')} />
+            </div>
+          );
+        })}
+      </div>
+      <button type="button" className="pf-add-btn" onClick={onAddItem}>+ Add field</button>
+    </>
+  );
+}
+
+/** Company Info, Bill To, Ship To, Buyer To, Invoice Info — all backed by an apiData { title, items } catalog. */
+export function InfoBlockForm({ title, items, onChangeTitle, onUpdateItem, onAddItem, onRemoveItem, titleEditable = true }) {
   return (
     <div className="pf">
-      <TextField label="Company name" value={company.name} onChange={(v) => onChange({ name: v })} style={company.styles?.name} onStyleChange={setStyle('name')} />
-      <TextField label="Address line 1" value={company.addressLine1} onChange={(v) => onChange({ addressLine1: v })} style={company.styles?.addressLine1} onStyleChange={setStyle('addressLine1')} />
-      <TextField label="Address line 2" value={company.addressLine2} onChange={(v) => onChange({ addressLine2: v })} style={company.styles?.addressLine2} onStyleChange={setStyle('addressLine2')} />
-      <TextField label="Email" value={company.email} onChange={(v) => onChange({ email: v })} style={company.styles?.email} onStyleChange={setStyle('email')} />
-      <TextField label="Phone" value={company.phone} onChange={(v) => onChange({ phone: v })} style={company.styles?.phone} onStyleChange={setStyle('phone')} />
-      <TextField label="Tax ID / VATIN" value={company.taxId} onChange={(v) => onChange({ taxId: v })} style={company.styles?.taxId} onStyleChange={setStyle('taxId')} />
+      {titleEditable && <Field label="Section title" value={title} placeholder="(no title shown)" onChange={onChangeTitle} />}
+      <InfoBlockFields items={items} onUpdateItem={onUpdateItem} onAddItem={onAddItem} onRemoveItem={onRemoveItem} />
     </div>
   );
 }
 
-export function ClientInfoForm({ client, onChange }) {
-  if (!client) return null;
-  const setStyle = (key) => makeStyleSetter(client, key, onChange);
-  return (
-    <div className="pf">
-      <TextField label="Buyer / client name" value={client.name} onChange={(v) => onChange({ name: v })} style={client.styles?.name} onStyleChange={setStyle('name')} />
-      <TextField label="Billing address" value={client.billingAddress} onChange={(v) => onChange({ billingAddress: v })} style={client.styles?.billingAddress} onStyleChange={setStyle('billingAddress')} />
-      <TextField label="Email" value={client.email} onChange={(v) => onChange({ email: v })} style={client.styles?.email} onStyleChange={setStyle('email')} />
-      <TextField label="Phone" value={client.phone} onChange={(v) => onChange({ phone: v })} style={client.styles?.phone} onStyleChange={setStyle('phone')} />
-      <TextField label="Country" value={client.country} onChange={(v) => onChange({ country: v })} style={client.styles?.country} onStyleChange={setStyle('country')} />
-      <TextField label="VATIN" value={client.taxId} onChange={(v) => onChange({ taxId: v })} style={client.styles?.taxId} onStyleChange={setStyle('taxId')} />
-      <TextField label="Place of supply" value={client.placeOfSupply} onChange={(v) => onChange({ placeOfSupply: v })} style={client.styles?.placeOfSupply} onStyleChange={setStyle('placeOfSupply')} />
-    </div>
-  );
-}
+/** Custom Block — a blank, per-instance info block with its own title + freeform fields, stored directly in element.data. */
+export function CustomBlockForm({ data, onChange }) {
+  const items = data.items || [];
+  const addItem = () => onChange({ items: [...items, { id: uuid(), label: 'New Field', value: '' }] });
+  const updateItem = (id, patch) => onChange({ items: items.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
+  const removeItem = (id) => onChange({ items: items.filter((i) => i.id !== id) });
 
-export function InvoiceMetaForm({ invoiceMeta, onChange }) {
-  if (!invoiceMeta) return null;
-  const setStyle = (key) => makeStyleSetter(invoiceMeta, key, onChange);
   return (
     <div className="pf">
-      {META_ROWS.flatMap(([labelA, keyA, labelB, keyB]) => [
-        <TextField key={keyA} label={labelA} value={metaDisplayValue(invoiceMeta[keyA])} onChange={(v) => onChange({ [keyA]: v })} style={invoiceMeta.styles?.[keyA]} onStyleChange={setStyle(keyA)} />,
-        keyB && <TextField key={keyB} label={labelB} value={metaDisplayValue(invoiceMeta[keyB])} onChange={(v) => onChange({ [keyB]: v })} style={invoiceMeta.styles?.[keyB]} onStyleChange={setStyle(keyB)} />,
-      ].filter(Boolean))}
-      <TextField
-        label="Terms of Delivery"
-        value={invoiceMeta.termsOfDelivery}
-        onChange={(v) => onChange({ termsOfDelivery: v })}
-        style={invoiceMeta.styles?.termsOfDelivery}
-        onStyleChange={setStyle('termsOfDelivery')}
-      />
+      <Field label="Block title" value={data.title} onChange={(v) => onChange({ title: v })} />
+      <InfoBlockFields items={items} onUpdateItem={updateItem} onAddItem={addItem} onRemoveItem={removeItem} />
     </div>
   );
 }
@@ -399,11 +395,16 @@ export function ProductTableForm({ elementData, onChange, products, currencySymb
 export function TotalsForm({ data, onChange }) {
   const tableColumns = getProductColumnDefinitions().filter((c) => c.numeric);
   const totalColumns = data.totalColumns || [];
+  const extraLines = data.extraLines || [];
 
   const toggleColumnTotal = (key) => {
     const next = totalColumns.includes(key) ? totalColumns.filter((k) => k !== key) : [...totalColumns, key];
     onChange({ totalColumns: next });
   };
+
+  const addExtraLine = () => onChange({ extraLines: [...extraLines, { id: uuid(), label: 'New Charge', amount: 0 }] });
+  const updateExtraLine = (id, patch) => onChange({ extraLines: extraLines.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
+  const removeExtraLine = (id) => onChange({ extraLines: extraLines.filter((l) => l.id !== id) });
 
   return (
     <div className="pf">
@@ -428,6 +429,21 @@ export function TotalsForm({ data, onChange }) {
         ))}
       </div>
       <p className="pf-hint">Tip: you can also drag a numeric column heading straight from the Product Table onto the Totals block on the page.</p>
+
+      <div className="pf-section-title">Extra charges</div>
+      <p className="pf-hint">Freeform lines (e.g. Shipping Fee) added to the grand total.</p>
+      <div className="pf-product-list">
+        {extraLines.map((line) => (
+          <div className="pf-product" key={line.id}>
+            <div className="pf-product__head">
+              <button type="button" className="pf-icon-btn" title="Remove charge" onClick={() => removeExtraLine(line.id)}>✕</button>
+            </div>
+            <Field label="Label" value={line.label} onChange={(v) => updateExtraLine(line.id, { label: v })} />
+            <Field label="Amount" type="number" value={line.amount} onChange={(v) => updateExtraLine(line.id, { amount: v })} />
+          </div>
+        ))}
+      </div>
+      <button type="button" className="pf-add-btn" onClick={addExtraLine}>+ Add charge</button>
     </div>
   );
 }

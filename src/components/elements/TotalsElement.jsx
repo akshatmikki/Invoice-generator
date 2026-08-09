@@ -12,9 +12,10 @@ const COLUMN_TOTAL_DEFS = [
 ];
 
 export function TotalsElement({ instanceId, data, products, selectedProductIds, currencySymbol, currencyDecimals = 2 }) {
-  const totals = computeInvoiceTotals(products, selectedProductIds, data.extraDiscountPercent, data.extraTaxPercent);
+  const totals = computeInvoiceTotals(products, selectedProductIds, data.extraDiscountPercent, data.extraTaxPercent, data.extraLines);
   const hasProducts = selectedProductIds.length > 0;
   const totalColumns = data.totalColumns || [];
+  const extraLines = data.extraLines || [];
   const { isOver, setNodeRef } = useDroppable({ id: `totals-drop-${instanceId}` });
 
   // Percentages shown inline next to each row — always relative to Subtotal, so they're easy to read at a glance.
@@ -90,6 +91,13 @@ export function TotalsElement({ instanceId, data, products, selectedProductIds, 
                   </div>
                 );
               })}
+              {extraLines.length > 0 && <div className="totals-divider" />}
+              {extraLines.map((line) => (
+                <div className="totals-row" key={line.id}>
+                  <span>{line.label}</span>
+                  <span className="num">{formatCurrency(Number(line.amount) || 0, currencySymbol, currencyDecimals)}</span>
+                </div>
+              ))}
             </>
           )}
           <div className="totals-row totals-row--grand">

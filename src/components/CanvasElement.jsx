@@ -2,7 +2,7 @@ import { useRef, useCallback } from 'react';
 import { useDesigner } from '../context/DesignerContext';
 import { ELEMENT_TYPES, findPaletteDefinition } from '../data/elementDefinitions';
 import { LogoElement, ImageElement, SignatureElement } from './elements/MediaElements';
-import { CompanyInfoElement, ClientInfoElement, InvoiceMetaElement } from './elements/InfoElements';
+import { InfoBlockElement, InvoiceMetaElement } from './elements/InfoElements';
 import { OrderInfoTableElement } from './elements/OrderInfoTableElement';
 import { ProductTableElement } from './elements/ProductTableElement';
 import { TotalsElement } from './elements/TotalsElement';
@@ -187,11 +187,17 @@ function renderElement(element, { onChange, apiData, elements }) {
     case ELEMENT_TYPES.SIGNATURE:
       return <SignatureElement data={data} onChange={onChange} />;
     case ELEMENT_TYPES.COMPANY_INFO:
-      return <CompanyInfoElement company={apiData?.company} />;
+      return <InfoBlockElement block={apiData?.company} />;
     case ELEMENT_TYPES.CLIENT_INFO:
-      return <ClientInfoElement client={apiData?.client} />;
+      return <InfoBlockElement block={apiData?.billTo} />;
+    case ELEMENT_TYPES.SHIP_TO:
+      return <InfoBlockElement block={apiData?.shipTo} />;
+    case ELEMENT_TYPES.BUYER_TO:
+      return <InfoBlockElement block={apiData?.buyerTo} />;
     case ELEMENT_TYPES.INVOICE_META:
-      return <InvoiceMetaElement invoiceMeta={apiData?.invoiceMeta} />;
+      return <InvoiceMetaElement invoiceMetaInfo={apiData?.invoiceMetaInfo} />;
+    case ELEMENT_TYPES.CUSTOM_BLOCK:
+      return <InfoBlockElement block={{ title: data.title, items: data.items || [] }} />;
     case ELEMENT_TYPES.ORDER_INFO_TABLE:
       return <OrderInfoTableElement data={data} items={apiData?.orderInfoItems || []} />;
     case ELEMENT_TYPES.PRODUCT_TABLE:
