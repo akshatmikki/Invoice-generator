@@ -45,6 +45,7 @@ export function PropertiesPanel() {
     onAddItem: () => addInfoItem(blockKey),
     onRemoveItem: (id) => removeInfoItem(blockKey, id),
     focusedFieldId,
+    sourceFields: apiData?.orderSourceFields || [],
     ...opts,
   });
 
@@ -109,7 +110,9 @@ export function PropertiesPanel() {
         {element.type === ELEMENT_TYPES.SHIP_TO && <InfoBlockForm {...infoBlockProps('shipTo', apiData?.shipTo)} />}
         {element.type === ELEMENT_TYPES.BUYER_TO && <InfoBlockForm {...infoBlockProps('buyerTo', apiData?.buyerTo)} />}
         {element.type === ELEMENT_TYPES.INVOICE_META && <InfoBlockForm {...infoBlockProps('invoiceMetaInfo', apiData?.invoiceMetaInfo)} />}
-        {element.type === ELEMENT_TYPES.CUSTOM_BLOCK && <CustomBlockForm data={element.data} onChange={onChange} focusedFieldId={focusedFieldId} />}
+        {element.type === ELEMENT_TYPES.CUSTOM_BLOCK && (
+          <CustomBlockForm data={element.data} onChange={onChange} focusedFieldId={focusedFieldId} sourceFields={apiData?.orderSourceFields || []} />
+        )}
         {element.type === ELEMENT_TYPES.ORDER_INFO_TABLE && (
           <OrderInfoTableForm
             elementData={element.data}
@@ -139,6 +142,7 @@ export function PropertiesPanel() {
             onAddProduct={() => addProduct(element.instanceId)}
             onRemoveProduct={removeProduct}
             focusedFieldId={focusedFieldId}
+            sourceRecords={apiData?.productSourceRecords || []}
           />
         )}
         {element.type === ELEMENT_TYPES.TOTALS && <TotalsForm data={element.data} onChange={onChange} focusedFieldId={focusedFieldId} />}

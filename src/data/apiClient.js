@@ -8,6 +8,8 @@ import {
   mockOrderInfoItems,
   mockProducts,
   mockSignatory,
+  mockOrderSourceFields,
+  mockProductSourceRecords,
   productColumnDefinitions,
   orderInfoColumnDefinitions,
 } from './mockApiData';
@@ -30,6 +32,7 @@ import {
  *       GET /api/order-info
  *       GET /api/products
  *       GET /api/signatory
+ *       GET /api/order-source-fields
  *  Every component in this app calls the functions below — nothing
  *  else in the codebase needs to change.
  * ------------------------------------------------------------------
@@ -85,6 +88,16 @@ export async function fetchSignatory() {
   return USE_STATIC_DATA ? Promise.resolve(mockSignatory) : getJson('/api/signatory');
 }
 
+/** Flat order/customer/location fields offered as "Insert from data" options on Info block Value fields. */
+export async function fetchOrderSourceFields() {
+  return USE_STATIC_DATA ? Promise.resolve(mockOrderSourceFields) : getJson('/api/order-source-fields');
+}
+
+/** Shipment/commodity records offered as "Insert from data" options on a Product Table line item. */
+export async function fetchProductSourceRecords() {
+  return USE_STATIC_DATA ? Promise.resolve(mockProductSourceRecords) : getJson('/api/product-source-records');
+}
+
 export function getProductColumnDefinitions() {
   // Column definitions stay client-side even after API integration —
   // they describe how the designer renders data, not the data itself.
@@ -92,7 +105,7 @@ export function getProductColumnDefinitions() {
 }
 
 export async function fetchAllInvoiceData() {
-  const [company, billTo, shipTo, buyerTo, invoiceMeta, invoiceMetaInfo, orderInfoItems, products, signatory] = await Promise.all([
+  const [company, billTo, shipTo, buyerTo, invoiceMeta, invoiceMetaInfo, orderInfoItems, products, signatory, orderSourceFields, productSourceRecords] = await Promise.all([
     fetchCompanyInfo(),
     fetchBillTo(),
     fetchShipTo(),
@@ -102,6 +115,8 @@ export async function fetchAllInvoiceData() {
     fetchOrderInfoItems(),
     fetchProducts(),
     fetchSignatory(),
+    fetchOrderSourceFields(),
+    fetchProductSourceRecords(),
   ]);
-  return { company, billTo, shipTo, buyerTo, invoiceMeta, invoiceMetaInfo, orderInfoItems, products, signatory };
+  return { company, billTo, shipTo, buyerTo, invoiceMeta, invoiceMetaInfo, orderInfoItems, products, signatory, orderSourceFields, productSourceRecords };
 }

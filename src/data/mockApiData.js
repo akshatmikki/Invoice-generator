@@ -133,6 +133,56 @@ export const mockOrderInfoItems = [
   { id: 'oi20', label: 'Consignee Address', value: '5130 CREEKBANK ROAD, MISSISSAUGA, ON, L4W2G2, Canada' },
 ];
 
+/**
+ * Flat list of fields pulled from the freight/order + invoice API payload (order header, customer,
+ * pickup/delivery locations, carrier/driver, invoice totals). Offered as "Insert from data" options
+ * next to each Info block's Value field, so a field can be filled from real order data instead of
+ * typed by hand. `group` controls which optgroup a field is listed under in that dropdown.
+ */
+export const mockOrderSourceFields = [
+  { key: 'customername', label: 'Customer Name', value: 'ALLIANCE TRANSPORT LTD.', group: 'Order & Invoice' },
+  { key: 'customerphone', label: 'Customer Phone', value: '(999) 999-9999', group: 'Order & Invoice' },
+  { key: 'customerordernumber', label: "Customer's Order No.", value: 'fgr546', group: 'Order & Invoice' },
+  { key: 'ordernumber', label: 'Order #', value: 'MRP3349', group: 'Order & Invoice' },
+  { key: 'invoicenumber', label: 'Invoice Number', value: 'AIN12101', group: 'Order & Invoice' },
+  { key: 'invoicedate', label: 'Invoice Date', value: '8/8/2026', group: 'Order & Invoice' },
+  { key: 'duedate', label: 'Due Date', value: '8/8/2026', group: 'Order & Invoice' },
+  { key: 'currencycode', label: 'Currency', value: 'CAD', group: 'Order & Invoice' },
+  { key: 'totalamount', label: 'Total Amount', value: '6567.0000', group: 'Order & Invoice' },
+  { key: 'trucknumbers', label: 'Truck Number', value: '007rtrtr', group: 'Order & Invoice' },
+  { key: 'trailernumbers', label: 'Trailer Number', value: '33243', group: 'Order & Invoice' },
+  { key: 'drivernames', label: 'Driver Name(s)', value: 'Nitin khanna, Rajnish Kumar', group: 'Order & Invoice' },
+  { key: 'carriername', label: 'Carrier Name', value: 'Ontoria', group: 'Order & Invoice' },
+  { key: 'factoringcompanyname', label: 'Factoring Company', value: 'Avaal technology', group: 'Order & Invoice' },
+  { key: 'pickuplocationname', label: 'Pickup Location', value: 'YAZAKI NORTH AMERICA', group: 'Locations' },
+  { key: 'pickupfulladdress', label: 'Pickup Full Address', value: '800 WILSON AVENUE, KITCHENER, ON, N2C0A2, Canada', group: 'Locations' },
+  { key: 'deliverylocationname', label: 'Delivery Location', value: 'ZEBRA PAPER', group: 'Locations' },
+  { key: 'deliveryfulladdress', label: 'Delivery Full Address', value: '5130 CREEKBANK ROAD, MISSISSAUGA, ON, L4W2G2, Canada', group: 'Locations' },
+];
+
+/**
+ * Shipment/commodity records pulled from the freight order API's commodity details. Offered as
+ * "Insert from data" options on a Product Table line item — picking one fills that row's name,
+ * description, qty, weight, weight unit, equipment type, value of goods and hazmat flag at once.
+ */
+export const mockProductSourceRecords = [
+  {
+    key: 'mrp3354-shipment',
+    label: 'MRP3354 — Shipment (LONDON DRUGS LTD, Reefer)',
+    fields: {
+      name: 'Shipment',
+      description: 'Reefer shipment, Annacis Whse → London Drugs Ltd (Order MRP3354)',
+      qty: 15,
+      unit: '',
+      weight: 26507,
+      weightUnit: '',
+      valueOfGoods: 0,
+      equipmentType: 'Reefer',
+      hazmat: false,
+    },
+  },
+];
+
 /** Column metadata the Order/Shipment Info Table element uses to build its column toggles — same shape as productColumnDefinitions. */
 export const orderInfoColumnDefinitions = [
   { key: 'label', label: 'Field', defaultOn: true, numeric: false },

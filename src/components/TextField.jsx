@@ -1,4 +1,4 @@
-import { FONT_FAMILIES } from '../utils/textStyle';
+import { FONT_FAMILIES, FONT_SIZES } from '../utils/textStyle';
 
 /** A labeled text field with a formatting toolbar (bold/italic/underline/font/size/color) applied to its whole value. */
 export function TextField({ label, value, placeholder, onChange, style, onStyleChange, multiline = false, rows = 3 }) {
@@ -53,16 +53,17 @@ export function TextField({ label, value, placeholder, onChange, style, onStyleC
             <option key={f.label} value={f.value}>{f.label}</option>
           ))}
         </select>
-        <input
-          type="number"
+        <select
           className="pf-fmt-size"
-          min="8"
-          max="72"
-          placeholder="Size"
           value={s.fontSize || ''}
           onChange={(e) => onStyleChange({ fontSize: e.target.value ? Number(e.target.value) : undefined })}
           title="Font size (px)"
-        />
+        >
+          <option value="">Size</option>
+          {FONT_SIZES.map((size) => (
+            <option key={size} value={size}>{size}</option>
+          ))}
+        </select>
         <input
           type="color"
           className="pf-fmt-color"

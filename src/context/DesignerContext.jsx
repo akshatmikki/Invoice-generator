@@ -54,14 +54,13 @@ function makePage(elements = [], backgroundImage = null) {
 
 const initialState = {
   loading: true,
-  apiData: null, // { company, client, invoiceMeta, orderInfoItems, products, signatory }
+  apiData: null, // { company, client, invoiceMeta, orderInfoItems, products, signatory, orderSourceFields, productSourceRecords }
   pages: [], // [{ id, elements }] — a real multi-page document, rendered top to bottom
   selectedElementId: null,
   // Set together with selectedElementId when a specific field is clicked on the canvas (e.g. a
   // Ship To row) so the Properties panel can scroll to and highlight that exact field's row.
   focusedFieldId: null,
-  // Taller than a standard A4 page to fit the sample freight invoice's Order/Shipment Info Table below the charges section.
-  pageSettings: { preset: 'Custom', width: PAGE_WIDTH, height: 1850, background: '' },
+  pageSettings: { preset: 'A4', width: PAGE_WIDTH, height: PAGE_HEIGHT, background: '' },
 };
 
 /** Applies `updater` to whichever page contains instanceId (elements ids are unique across the whole document). */

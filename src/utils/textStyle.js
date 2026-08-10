@@ -10,6 +10,9 @@ export const FONT_FAMILIES = [
   { value: 'Georgia, serif', label: 'Serif' },
 ];
 
+/** Preset font sizes (px) offered in the size dropdown next to the font family picker. */
+export const FONT_SIZES = [8, 9, 10, 10.5, 11, 12, 12.5, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72];
+
 /** Converts a field's style record into a React inline style object, for rendering on the canvas. */
 export function styleToCss(style) {
   if (!style) return undefined;

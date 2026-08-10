@@ -52,24 +52,20 @@ export function createDefaultTemplateElements() {
       textBlock('left', 12, false, 'VAT Amount (in words)\nOmani Rial One Hundred Seventy Five Only (OMR 175.000)')
     ),
     el(ELEMENT_TYPES.DIVIDER, 'main', 24, 760, 750, { style: 'solid' }),
-    el(ELEMENT_TYPES.ORDER_INFO_TABLE, 'main', 24, 790, 750, {
-      selectedRowIds: ['oi1', 'oi2', 'oi3', 'oi4', 'oi5', 'oi6', 'oi7', 'oi8', 'oi9', 'oi10', 'oi11', 'oi12', 'oi13', 'oi14', 'oi15', 'oi16', 'oi17', 'oi18', 'oi19', 'oi20'],
-      visibleColumns: ['label', 'value'],
-    }),
     el(
       ELEMENT_TYPES.TEXT_BLOCK,
       'main',
       24,
-      1505,
+      800,
       460,
       textBlock('left', 10.5, false, 'Declaration\nWe declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.')
     ),
-    el(ELEMENT_TYPES.TEXT_BLOCK, 'main', 560, 1505, 210, textBlock('right', 12, true, 'for Ali & Co')),
-    el(ELEMENT_TYPES.SIGNATURE, 'main', 560, 1625, 210, {
+    el(ELEMENT_TYPES.TEXT_BLOCK, 'main', 560, 800, 210, textBlock('right', 12, true, 'for Ali & Co')),
+    el(ELEMENT_TYPES.SIGNATURE, 'main', 560, 880, 210, {
       imageData: null,
       label: 'Authorised Signatory',
       styles: {},
     }),
-    el(ELEMENT_TYPES.TEXT_BLOCK, 'footer', 0, 1810, 794, textBlock('center', 10, false, 'This is a Computer Generated Invoice')),
+    el(ELEMENT_TYPES.TEXT_BLOCK, 'footer', 0, 1035, 794, textBlock('center', 10, false, 'This is a Computer Generated Invoice')),
   ];
 }

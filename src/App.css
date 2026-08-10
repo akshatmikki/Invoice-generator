@@ -1008,10 +1008,10 @@ tr.el-field--clickable:hover td {
   border: 1px solid var(--ink-700);
   color: var(--paper-0);
   border-radius: 4px;
-  padding: 3px 2px;
+  padding: 3px 1px;
   font-size: 10px;
   height: 24px;
-  width: 38px;
+  width: 46px;
   flex-shrink: 0;
 }
 
@@ -1165,7 +1165,40 @@ tr.el-field--clickable:hover td {
   display: flex;
   align-items: center;
   gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pf-product--open .pf-product__head {
   margin-bottom: 8px;
+}
+
+.pf-product__chevron {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--slate-300);
+  transition: transform 0.15s ease;
+}
+
+.pf-product__chevron--open {
+  transform: rotate(90deg);
+}
+
+.pf-product__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--paper-0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pf-product__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .pf-product__name {

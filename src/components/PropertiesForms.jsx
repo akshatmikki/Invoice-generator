@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getProductColumnDefinitions, getOrderInfoColumnDefinitions } from '../data/apiClient';
 import { formatCurrency } from '../utils/calculations';
 import { QUERYABLE_FIELDS, NUMERIC_FIELDS, OPERATORS, AGGREGATIONS, fieldType } from '../utils/query';
-import { makeStyleSetter } from '../utils/textStyle';
+import { makeStyleSetter, FONT_SIZES } from '../utils/textStyle';
 import { TextField } from './TextField';
 import { PAGE_SIZE_PRESETS } from '../context/DesignerContext';
 import { v4 as uuid } from 'uuid';
@@ -18,6 +18,19 @@ function Field({ label, value, placeholder, onChange, type = 'text' }) {
         placeholder={placeholder}
         onChange={(e) => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
       />
+    </label>
+  );
+}
+
+function SizeField({ label, value, fallback, onChange }) {
+  return (
+    <label className="pf-field">
+      <span className="pf-field__label">{label}</span>
+      <select className="pf-input" value={value ?? fallback} onChange={(e) => onChange(Number(e.target.value))}>
+        {FONT_SIZES.map((size) => (
+          <option key={size} value={size}>{size}</option>
+        ))}
+      </select>
     </label>
   );
 }
@@ -88,60 +101,174 @@ export function PageSetupForm({ pageSettings, onChange }) {
 }
 
 /**
- * Wraps one field/row card in the Properties panel. When its id matches the field the user just
- * clicked on the canvas, it scrolls into view and gets a highlighted border so it's easy to find
- * among a long list of fields.
+ * Tracks which single row/field is expanded in an accordion list. Opening a field on the canvas
+ * (via focusedFieldId) expands that row; clicking a row's header in the panel toggles it directly;
+ * and — when the caller passes its items array — appending a new item (via "+ Add") auto-opens it,
+ * since new items are always appended at the end of the array.
  */
-function FocusRow({ id, focusedFieldId, className = 'pf-product', children }) {
+function useAccordion(focusedFieldId, items) {
+  const [openId, setOpenId] = useState(focusedFieldId || null);
+  const prevLengthRef = useRef(items ? items.length : 0);
+
+  useEffect(() => {
+    if (focusedFieldId) setOpenId(focusedFieldId);
+  }, [focusedFieldId]);
+
+  useEffect(() => {
+    if (!items) return;
+    if (items.length > prevLengthRef.current) {
+      setOpenId(items[items.length - 1].id);
+    }
+    prevLengthRef.current = items.length;
+  }, [items]);
+
+  return [openId, setOpenId];
+}
+
+/**
+ * One collapsible row/card in the Properties panel. Collapsed, it shows only its header title.
+ * Clicking the header opens it — collapsing any other open row — and reveals its full
+ * customization plus (when onAdd is given) an "Add" button directly below it. When its id matches
+ * the field the user just clicked on the canvas, it also scrolls into view and gets a highlighted
+ * border so it's easy to find among a long list of fields.
+ */
+function AccordionRow({ id, focusedFieldId, openId, onToggle, title, headerExtra, onRemove, removeTitle = 'Remove', addLabel, onAdd, className = 'pf-product', children }) {
   const ref = useRef(null);
   const isFocused = !!id && id === focusedFieldId;
+  const isOpen = id === openId;
   useEffect(() => {
-    if (isFocused && ref.current) {
+    if ((isFocused || isOpen) && ref.current) {
       ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [isFocused]);
+  }, [isFocused, isOpen]);
   return (
-    <div ref={ref} className={`${className} ${isFocused ? `${className}--focused` : ''}`}>
-      {children}
+    <div ref={ref} className={`${className} ${isFocused ? `${className}--focused` : ''} ${isOpen ? `${className}--open` : `${className}--collapsed`}`}>
+      <div className={`${className}__head`} onClick={() => onToggle(isOpen ? null : id)}>
+        <span className={`${className}__chevron ${isOpen ? `${className}__chevron--open` : ''}`}>▸</span>
+        <span className={`${className}__title`}>{title}</span>
+        {headerExtra}
+        {onRemove && (
+          <button
+            type="button"
+            className="pf-icon-btn"
+            title={removeTitle}
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      {isOpen && (
+        <div className={`${className}__body`}>
+          {children}
+          {onAdd && <button type="button" className="pf-add-btn" onClick={onAdd}>{addLabel}</button>}
+        </div>
+      )}
     </div>
   );
 }
 
+/** "Insert from data" dropdown offered next to a Value field — picking an option copies that order/customer/location field's value in, still leaving it as free, styleable text. */
+function InsertFromDataField({ sourceFields, onInsert }) {
+  if (!sourceFields?.length) return null;
+  const groups = [];
+  for (const f of sourceFields) {
+    let g = groups.find((g) => g.name === f.group);
+    if (!g) { g = { name: f.group, fields: [] }; groups.push(g); }
+    g.fields.push(f);
+  }
+  return (
+    <label className="pf-field">
+      <span className="pf-field__label">Insert from data</span>
+      <select
+        className="pf-input"
+        value=""
+        onChange={(e) => {
+          const picked = sourceFields.find((f) => f.key === e.target.value);
+          if (picked) onInsert(picked.value);
+        }}
+      >
+        <option value="">— choose a field —</option>
+        {groups.map((g) => (
+          <optgroup key={g.name} label={g.name}>
+            {g.fields.map((f) => (
+              <option key={f.key} value={f.key}>{f.label}</option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** "Insert from data" dropdown for a Product Table row — picking a shipment/commodity record fills every matching field on that row at once (name, description, qty, weight, etc.), instead of one field at a time. */
+function InsertRecordField({ records, onInsert }) {
+  if (!records?.length) return null;
+  return (
+    <label className="pf-field">
+      <span className="pf-field__label">Insert from data</span>
+      <select
+        className="pf-input"
+        value=""
+        onChange={(e) => {
+          const picked = records.find((r) => r.key === e.target.value);
+          if (picked) onInsert(picked.fields);
+        }}
+      >
+        <option value="">— choose a shipment —</option>
+        {records.map((r) => (
+          <option key={r.key} value={r.key}>{r.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 /** Shared "list of label/value rows with ✕ remove + + Add field" body, used by InfoBlockForm and CustomBlockForm. */
-function InfoBlockFields({ items, onUpdateItem, onAddItem, onRemoveItem, focusedFieldId }) {
+function InfoBlockFields({ items, onUpdateItem, onAddItem, onRemoveItem, focusedFieldId, sourceFields }) {
+  const [openId, setOpenId] = useAccordion(focusedFieldId, items);
   return (
     <>
       <div className="pf-product-list">
         {items.map((item) => {
           const setItemStyle = (key) => makeStyleSetter(item, key, (patch) => onUpdateItem(item.id, patch));
           return (
-            <FocusRow id={item.id} focusedFieldId={focusedFieldId} key={item.id}>
-              <div className="pf-product__head">
-                <button type="button" className="pf-icon-btn" title="Remove field" onClick={() => onRemoveItem(item.id)}>✕</button>
-              </div>
+            <AccordionRow
+              key={item.id}
+              id={item.id}
+              focusedFieldId={focusedFieldId}
+              openId={openId}
+              onToggle={setOpenId}
+              title={item.label || 'Untitled field'}
+              onRemove={() => onRemoveItem(item.id)}
+              removeTitle="Remove field"
+              addLabel="+ Add field"
+              onAdd={onAddItem}
+            >
               <TextField label="Field label" value={item.label} placeholder="Field label" onChange={(v) => onUpdateItem(item.id, { label: v })} style={item.styles?.label} onStyleChange={setItemStyle('label')} />
+              <InsertFromDataField sourceFields={sourceFields} onInsert={(v) => onUpdateItem(item.id, { value: v })} />
               <TextField label="Value" value={item.value} placeholder="Value" onChange={(v) => onUpdateItem(item.id, { value: v })} style={item.styles?.value} onStyleChange={setItemStyle('value')} />
-            </FocusRow>
+            </AccordionRow>
           );
         })}
       </div>
-      <button type="button" className="pf-add-btn" onClick={onAddItem}>+ Add field</button>
+      {!openId && <button type="button" className="pf-add-btn" onClick={onAddItem}>+ Add field</button>}
     </>
   );
 }
 
 /** Company Info, Bill To, Ship To, Buyer To, Invoice Info — all backed by an apiData { title, items } catalog. */
-export function InfoBlockForm({ title, items, onChangeTitle, onUpdateItem, onAddItem, onRemoveItem, titleEditable = true, focusedFieldId }) {
+export function InfoBlockForm({ title, items, onChangeTitle, onUpdateItem, onAddItem, onRemoveItem, titleEditable = true, focusedFieldId, sourceFields }) {
   return (
     <div className="pf">
       {titleEditable && <Field label="Section title" value={title} placeholder="(no title shown)" onChange={onChangeTitle} />}
-      <InfoBlockFields items={items} onUpdateItem={onUpdateItem} onAddItem={onAddItem} onRemoveItem={onRemoveItem} focusedFieldId={focusedFieldId} />
+      <InfoBlockFields items={items} onUpdateItem={onUpdateItem} onAddItem={onAddItem} onRemoveItem={onRemoveItem} focusedFieldId={focusedFieldId} sourceFields={sourceFields} />
     </div>
   );
 }
 
 /** Custom Block — a blank, per-instance info block with its own title + freeform fields, stored directly in element.data. */
-export function CustomBlockForm({ data, onChange, focusedFieldId }) {
+export function CustomBlockForm({ data, onChange, focusedFieldId, sourceFields }) {
   const items = data.items || [];
   const addItem = () => onChange({ items: [...items, { id: uuid(), label: 'New Field', value: '' }] });
   const updateItem = (id, patch) => onChange({ items: items.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
@@ -150,7 +277,7 @@ export function CustomBlockForm({ data, onChange, focusedFieldId }) {
   return (
     <div className="pf">
       <Field label="Block title" value={data.title} onChange={(v) => onChange({ title: v })} />
-      <InfoBlockFields items={items} onUpdateItem={updateItem} onAddItem={addItem} onRemoveItem={removeItem} focusedFieldId={focusedFieldId} />
+      <InfoBlockFields items={items} onUpdateItem={updateItem} onAddItem={addItem} onRemoveItem={removeItem} focusedFieldId={focusedFieldId} sourceFields={sourceFields} />
     </div>
   );
 }
@@ -174,26 +301,43 @@ export function OrderInfoTableForm({ elementData, onChange, items, onUpdateItem,
     onChange({ visibleColumns: next });
   };
 
+  const [openId, setOpenId] = useAccordion(focusedFieldId, items);
+
   return (
     <div className="pf">
       <div className="pf-section-title">Order / shipment rows</div>
-      <p className="pf-hint">Tick to include on the invoice. Edit any field below — order #, dates, truck/driver/trailer/carrier, factoring company, shipper/consignee.</p>
+      <p className="pf-hint">Tick to include on the invoice. Click a row to edit it.</p>
       <div className="pf-product-list">
         {items.map((item) => {
           const setItemStyle = (key) => makeStyleSetter(item, key, (patch) => onUpdateItem(item.id, patch));
           return (
-            <FocusRow id={item.id} focusedFieldId={focusedFieldId} key={item.id}>
-              <div className="pf-product__head">
-                <input type="checkbox" checked={elementData.selectedRowIds.includes(item.id)} onChange={() => toggleRow(item.id)} />
-                <button type="button" className="pf-icon-btn" title="Remove row" onClick={() => onRemoveItem(item.id)}>✕</button>
-              </div>
+            <AccordionRow
+              key={item.id}
+              id={item.id}
+              focusedFieldId={focusedFieldId}
+              openId={openId}
+              onToggle={setOpenId}
+              title={item.label || 'Untitled row'}
+              headerExtra={
+                <input
+                  type="checkbox"
+                  checked={elementData.selectedRowIds.includes(item.id)}
+                  onChange={() => toggleRow(item.id)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              }
+              onRemove={() => onRemoveItem(item.id)}
+              removeTitle="Remove row"
+              addLabel="+ Add row"
+              onAdd={onAddItem}
+            >
               <TextField label="Field" value={item.label} placeholder="Field name" onChange={(v) => onUpdateItem(item.id, { label: v })} style={item.styles?.label} onStyleChange={setItemStyle('label')} />
               <TextField label="Value" value={item.value} placeholder="Value" onChange={(v) => onUpdateItem(item.id, { value: v })} style={item.styles?.value} onStyleChange={setItemStyle('value')} />
-            </FocusRow>
+            </AccordionRow>
           );
         })}
       </div>
-      <button type="button" className="pf-add-btn" onClick={onAddItem}>+ Add row</button>
+      {!openId && <button type="button" className="pf-add-btn" onClick={onAddItem}>+ Add row</button>}
 
       <div className="pf-section-title">Columns shown</div>
       <div className="pf-chips">
@@ -231,10 +375,10 @@ export function OrderInfoTableForm({ elementData, onChange, items, onUpdateItem,
         onChange={(v) => setTableStyle({ borderColor: v })}
         onReset={() => setTableStyle({ borderColor: undefined })}
       />
-      <Field
+      <SizeField
         label="Cell font size (px)"
-        type="number"
-        value={tableStyle.fontSize || TABLE_STYLE_DEFAULTS.fontSize}
+        value={tableStyle.fontSize}
+        fallback={TABLE_STYLE_DEFAULTS.fontSize}
         onChange={(v) => setTableStyle({ fontSize: v })}
       />
       <label className="pf-checkbox">
@@ -296,7 +440,7 @@ const TABLE_STYLE_DEFAULTS = {
   fontSize: 12.5,
 };
 
-export function ProductTableForm({ elementData, onChange, products, currencySymbol, currencyDecimals, onUpdateProduct, onAddProduct, onRemoveProduct, focusedFieldId }) {
+export function ProductTableForm({ elementData, onChange, products, currencySymbol, currencyDecimals, onUpdateProduct, onAddProduct, onRemoveProduct, focusedFieldId, sourceRecords }) {
   const columnDefs = getProductColumnDefinitions();
   const tableStyle = elementData.tableStyle || {};
   const setTableStyle = (patch) => onChange({ tableStyle: { ...tableStyle, ...patch } });
@@ -315,19 +459,37 @@ export function ProductTableForm({ elementData, onChange, products, currencySymb
     onChange({ visibleColumns: next });
   };
 
+  const [openId, setOpenId] = useAccordion(focusedFieldId, products);
+
   return (
     <div className="pf">
       <div className="pf-section-title">Line items</div>
-      <p className="pf-hint">Tick to include on the invoice. Edit any field below.</p>
+      <p className="pf-hint">Tick to include on the invoice. Click a line item to edit it.</p>
       <div className="pf-product-list">
         {products.map((p) => {
           const setProductStyle = (key) => makeStyleSetter(p, key, (patch) => onUpdateProduct(p.id, patch));
           return (
-            <FocusRow id={p.id} focusedFieldId={focusedFieldId} key={p.id}>
-              <div className="pf-product__head">
-                <input type="checkbox" checked={elementData.selectedProductIds.includes(p.id)} onChange={() => toggleProduct(p.id)} />
-                <button type="button" className="pf-icon-btn" title="Remove from catalog" onClick={() => onRemoveProduct(p.id)}>✕</button>
-              </div>
+            <AccordionRow
+              key={p.id}
+              id={p.id}
+              focusedFieldId={focusedFieldId}
+              openId={openId}
+              onToggle={setOpenId}
+              title={p.name || 'Untitled item'}
+              headerExtra={
+                <input
+                  type="checkbox"
+                  checked={elementData.selectedProductIds.includes(p.id)}
+                  onChange={() => toggleProduct(p.id)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              }
+              onRemove={() => onRemoveProduct(p.id)}
+              removeTitle="Remove from catalog"
+              addLabel="+ Add line item"
+              onAdd={onAddProduct}
+            >
+              <InsertRecordField records={sourceRecords} onInsert={(fields) => onUpdateProduct(p.id, fields)} />
               <TextField label="Item name" value={p.name} placeholder="Item name" onChange={(v) => onUpdateProduct(p.id, { name: v })} style={p.styles?.name} onStyleChange={setProductStyle('name')} />
               <TextField label="Description" value={p.description} placeholder="Optional description" onChange={(v) => onUpdateProduct(p.id, { description: v })} style={p.styles?.description} onStyleChange={setProductStyle('description')} />
               <div className="pf-product__grid">
@@ -348,11 +510,11 @@ export function ProductTableForm({ elementData, onChange, products, currencySymb
                 Hazmat
               </label>
               <div className="pf-product__amount">{formatCurrency(p.qty * p.unitPrice, currencySymbol, currencyDecimals)}</div>
-            </FocusRow>
+            </AccordionRow>
           );
         })}
       </div>
-      <button type="button" className="pf-add-btn" onClick={onAddProduct}>+ Add line item</button>
+      {!openId && <button type="button" className="pf-add-btn" onClick={onAddProduct}>+ Add line item</button>}
 
       <div className="pf-section-title">Columns shown</div>
       <div className="pf-chips">
@@ -390,10 +552,10 @@ export function ProductTableForm({ elementData, onChange, products, currencySymb
         onChange={(v) => setTableStyle({ borderColor: v })}
         onReset={() => setTableStyle({ borderColor: undefined })}
       />
-      <Field
+      <SizeField
         label="Cell font size (px)"
-        type="number"
-        value={tableStyle.fontSize || TABLE_STYLE_DEFAULTS.fontSize}
+        value={tableStyle.fontSize}
+        fallback={TABLE_STYLE_DEFAULTS.fontSize}
         onChange={(v) => setTableStyle({ fontSize: v })}
       />
       <label className="pf-checkbox">
@@ -426,6 +588,7 @@ export function TotalsForm({ data, onChange, focusedFieldId }) {
   const addExtraLine = () => onChange({ extraLines: [...extraLines, { id: uuid(), label: 'New Charge', amount: 0 }] });
   const updateExtraLine = (id, patch) => onChange({ extraLines: extraLines.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
   const removeExtraLine = (id) => onChange({ extraLines: extraLines.filter((l) => l.id !== id) });
+  const [openId, setOpenId] = useAccordion(focusedFieldId, extraLines);
 
   return (
     <div className="pf">
@@ -455,16 +618,24 @@ export function TotalsForm({ data, onChange, focusedFieldId }) {
       <p className="pf-hint">Freeform lines (e.g. Shipping Fee) added to the grand total.</p>
       <div className="pf-product-list">
         {extraLines.map((line) => (
-          <FocusRow id={line.id} focusedFieldId={focusedFieldId} key={line.id}>
-            <div className="pf-product__head">
-              <button type="button" className="pf-icon-btn" title="Remove charge" onClick={() => removeExtraLine(line.id)}>✕</button>
-            </div>
+          <AccordionRow
+            key={line.id}
+            id={line.id}
+            focusedFieldId={focusedFieldId}
+            openId={openId}
+            onToggle={setOpenId}
+            title={line.label || 'New charge'}
+            onRemove={() => removeExtraLine(line.id)}
+            removeTitle="Remove charge"
+            addLabel="+ Add charge"
+            onAdd={addExtraLine}
+          >
             <Field label="Label" value={line.label} onChange={(v) => updateExtraLine(line.id, { label: v })} />
             <Field label="Amount" type="number" value={line.amount} onChange={(v) => updateExtraLine(line.id, { amount: v })} />
-          </FocusRow>
+          </AccordionRow>
         ))}
       </div>
-      <button type="button" className="pf-add-btn" onClick={addExtraLine}>+ Add charge</button>
+      {!openId && <button type="button" className="pf-add-btn" onClick={addExtraLine}>+ Add charge</button>}
     </div>
   );
 }
