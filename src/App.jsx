@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { DndContext } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import { DesignerProvider, useDesigner, findElementAcrossPages, getZones, zoneForY } from './context/DesignerContext';
 import { ELEMENT_TYPES, findPaletteDefinition, defaultWidthFor } from './data/elementDefinitions';
 import { Toolbar } from './components/Toolbar';
@@ -64,17 +65,33 @@ function Workspace() {
       return;
     }
 
-    // Case 2: dragging a numeric column heading from a Product Table onto a Totals block
+    // Case 2/3: dragging a column heading from a Product Table — either onto a Totals block
+    // (numeric columns only), or onto another column heading of the same table to reorder it.
     if (activeData.fromColumnHeader) {
       const overId = String(over.id);
-      if (!overId.startsWith('totals-drop-')) return;
-      const totalsInstanceId = overId.replace('totals-drop-', '');
-      const found = findElementAcrossPages(pages, totalsInstanceId);
-      if (!found || found.type !== ELEMENT_TYPES.TOTALS) return;
-      const current = found.data.totalColumns || [];
-      const key = activeData.columnKey;
-      if (current.includes(key)) return; // already added, nothing to do
-      updateElementData(totalsInstanceId, { totalColumns: [...current, key] });
+
+      if (overId.startsWith('totals-drop-')) {
+        if (!activeData.numeric) return;
+        const totalsInstanceId = overId.replace('totals-drop-', '');
+        const found = findElementAcrossPages(pages, totalsInstanceId);
+        if (!found || found.type !== ELEMENT_TYPES.TOTALS) return;
+        const current = found.data.totalColumns || [];
+        const key = activeData.columnKey;
+        if (current.includes(key)) return; // already added, nothing to do
+        updateElementData(totalsInstanceId, { totalColumns: [...current, key] });
+        return;
+      }
+
+      const overData = over.data.current || {};
+      if (overData.fromColumnHeader && overData.instanceId === activeData.instanceId) {
+        const found = findElementAcrossPages(pages, activeData.instanceId);
+        if (!found) return;
+        const cols = found.data.visibleColumns || [];
+        const oldIndex = cols.indexOf(activeData.columnKey);
+        const newIndex = cols.indexOf(overData.columnKey);
+        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+        updateElementData(activeData.instanceId, { visibleColumns: arrayMove(cols, oldIndex, newIndex) });
+      }
     }
   };
 

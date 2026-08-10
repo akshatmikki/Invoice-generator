@@ -1,4 +1,4 @@
-import { useDraggable } from '@dnd-kit/core';
+import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { getProductColumnDefinitions } from '../../data/apiClient';
 import { computeLineTotal, formatCurrency } from '../../utils/calculations';
@@ -6,27 +6,27 @@ import { styleToCss } from '../../utils/textStyle';
 
 const TEXT_COLS = ['name', 'description'];
 
-/** A numeric column header the user can pick up and drop onto a Totals block to add its total there. */
+/** A column header the user can drag left/right to reorder columns, or (if numeric) drop onto a Totals block to total it. */
 function DraggableColumnHeader({ instanceId, column, className }) {
-  const draggableId = `col-${instanceId}-${column.key}`;
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: draggableId,
-    data: { fromColumnHeader: true, columnKey: column.key, columnLabel: column.label },
+  const sortId = `col-${instanceId}-${column.key}`;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: sortId,
+    data: { fromColumnHeader: true, instanceId, columnKey: column.key, columnLabel: column.label, numeric: column.numeric },
   });
 
-  if (!column.numeric) {
-    return <th className={className}>{column.label}</th>;
-  }
+  const thStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    ...(isDragging ? { position: 'relative', zIndex: 1 } : null),
+  };
 
   return (
-    <th className={className}>
+    <th ref={setNodeRef} className={className} style={thStyle}>
       <span
-        ref={setNodeRef}
         {...listeners}
         {...attributes}
         className={`col-drag-handle ${isDragging ? 'col-drag-handle--dragging' : ''}`}
-        style={{ transform: CSS.Translate.toString(transform) }}
-        title="Drag onto a Totals block to show this column's total there"
+        title={column.numeric ? "Drag to reorder — drop onto a Totals block to show this column's total there" : 'Drag to reorder columns'}
       >
         {column.label} <span className="col-drag-handle__icon">⠿</span>
       </span>
@@ -46,7 +46,8 @@ function tableStyleVars(tableStyle = {}) {
 
 export function ProductTableElement({ instanceId, data, products, currencySymbol, currencyDecimals = 2, onFieldClick }) {
   const columnDefs = getProductColumnDefinitions();
-  const visible = columnDefs.filter((c) => data.visibleColumns.includes(c.key));
+  const columnsByKey = new Map(columnDefs.map((c) => [c.key, c]));
+  const visible = data.visibleColumns.map((key) => columnsByKey.get(key)).filter(Boolean);
   const selected = products.filter((p) => data.selectedProductIds.includes(p.id));
   const styleVars = tableStyleVars(data.tableStyle);
 
@@ -64,14 +65,16 @@ export function ProductTableElement({ instanceId, data, products, currencySymbol
         <thead>
           <tr>
             <th className="align-right">Sl No.</th>
-            {visible.map((c) => (
-              <DraggableColumnHeader
-                key={c.key}
-                instanceId={instanceId}
-                column={c}
-                className={numericCols.includes(c.key) ? 'align-right' : ''}
-              />
-            ))}
+            <SortableContext items={visible.map((c) => `col-${instanceId}-${c.key}`)} strategy={horizontalListSortingStrategy}>
+              {visible.map((c) => (
+                <DraggableColumnHeader
+                  key={c.key}
+                  instanceId={instanceId}
+                  column={c}
+                  className={numericCols.includes(c.key) ? 'align-right' : ''}
+                />
+              ))}
+            </SortableContext>
           </tr>
         </thead>
         <tbody>
@@ -95,8 +98,8 @@ export function ProductTableElement({ instanceId, data, products, currencySymbol
         </tbody>
       </table>
       <p className="el-footnote" data-html2canvas-ignore="true">
-        {selected.length} of {products.length} available line items shown · Amount is auto-calculated · drag a numeric
-        column heading onto a Totals block to total it · select to edit
+        {selected.length} of {products.length} available line items shown · Amount is auto-calculated · drag a column
+        heading left/right to reorder, or drop a numeric one onto a Totals block to total it · select to edit
       </p>
     </div>
   );
