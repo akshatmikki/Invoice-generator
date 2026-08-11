@@ -54,6 +54,68 @@ export function sumColumn(items, key) {
   return round2(items.reduce((sum, i) => sum + (Number(i[key]) || 0), 0));
 }
 
+/** Numeric per-item fields a formula term can reference — summed across the selected products. */
+export const FORMULA_PRODUCT_FIELDS = [
+  { key: 'qty', label: 'Total Qty' },
+  { key: 'unitPrice', label: 'Total Unit Price' },
+  { key: 'discountAmt', label: 'Total Discount Amt' },
+  { key: 'taxAmt', label: 'Total Tax Amt' },
+  { key: 'lineTotal', label: 'Total Line Total' },
+  { key: 'weight', label: 'Total Weight' },
+  { key: 'valueOfGoods', label: 'Total Value of Goods' },
+];
+
+/** Already-computed invoice totals a formula term can reference (see computeInvoiceTotals' return shape). */
+export const FORMULA_TOTAL_FIELDS = [
+  { key: 'subtotal', label: 'Subtotal (Taxable Value)' },
+  { key: 'totalLineDiscount', label: 'Item Discounts' },
+  { key: 'extraDiscountAmt', label: 'Extra Discount Amount' },
+  { key: 'totalLineTax', label: 'Item Tax' },
+  { key: 'extraTaxAmt', label: 'Extra Tax Amount' },
+  { key: 'extraLinesTotal', label: 'Extra Charges Total' },
+  { key: 'grandTotal', label: 'Grand Total' },
+];
+
+/**
+ * Evaluates a chain of formula terms left-to-right (no operator precedence — matches the
+ * row-by-row builder UI). Each term is one of:
+ *   { sourceType: 'column', field, op }   — sum of a numeric product column across selected items
+ *   { sourceType: 'total', field, op }    — an already-computed invoice total
+ *   { sourceType: 'constant', constant, op } — a fixed number
+ * `op` ('+' | '-' | '*' | '/') combines this term with the running result; ignored on the first term.
+ */
+export function evaluateFormula(terms, items, totals) {
+  if (!terms || terms.length === 0) return 0;
+  let result = 0;
+  terms.forEach((term, i) => {
+    const value =
+      term.sourceType === 'constant'
+        ? Number(term.constant) || 0
+        : term.sourceType === 'total'
+        ? Number(totals?.[term.field]) || 0
+        : sumColumn(items, term.field);
+    if (i === 0) {
+      result = value;
+      return;
+    }
+    switch (term.op) {
+      case '-':
+        result -= value;
+        break;
+      case '*':
+        result *= value;
+        break;
+      case '/':
+        result = value ? result / value : 0;
+        break;
+      case '+':
+      default:
+        result += value;
+    }
+  });
+  return round2(result);
+}
+
 /** Safe percentage: amount as a % of base, 0 if base is 0. */
 export function percentOf(amount, base) {
   if (!base) return 0;

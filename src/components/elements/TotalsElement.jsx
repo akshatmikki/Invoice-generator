@@ -1,5 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
-import { computeInvoiceTotals, formatCurrency, sumColumn, percentOf } from '../../utils/calculations';
+import { computeInvoiceTotals, formatCurrency, sumColumn, percentOf, evaluateFormula } from '../../utils/calculations';
 
 // Which table columns can have a "column total" row shown, and how to compute + label each.
 // (SKU/Item/Description/Category are text, so they're excluded — only numeric columns make sense to total.)
@@ -16,6 +16,7 @@ export function TotalsElement({ instanceId, data, products, selectedProductIds, 
   const hasProducts = selectedProductIds.length > 0;
   const totalColumns = data.totalColumns || [];
   const extraLines = data.extraLines || [];
+  const formulaLines = data.formulaLines || [];
   const { isOver, setNodeRef } = useDroppable({ id: `totals-drop-${instanceId}` });
 
   // Percentages shown inline next to each row — always relative to Subtotal, so they're easy to read at a glance.
@@ -100,6 +101,17 @@ export function TotalsElement({ instanceId, data, products, selectedProductIds, 
                 >
                   <span>{line.label}</span>
                   <span className="num">{formatCurrency(Number(line.amount) || 0, currencySymbol, currencyDecimals)}</span>
+                </div>
+              ))}
+              {formulaLines.length > 0 && <div className="totals-divider" />}
+              {formulaLines.map((line) => (
+                <div
+                  className={`totals-row ${onFieldClick ? 'el-field--clickable' : ''}`}
+                  key={line.id}
+                  onClick={onFieldClick ? (e) => { e.stopPropagation(); onFieldClick(line.id); } : undefined}
+                >
+                  <span>{line.label}</span>
+                  <span className="num">{formatCurrency(evaluateFormula(line.terms, totals.items, totals), currencySymbol, currencyDecimals)}</span>
                 </div>
               ))}
             </>

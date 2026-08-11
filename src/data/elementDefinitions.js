@@ -100,7 +100,7 @@ export function createDefaultElementData(type) {
     case ELEMENT_TYPES.ORDER_INFO_TABLE:
       return { selectedRowIds: [], visibleColumns: ['label', 'value'], tableStyle: {} };
     case ELEMENT_TYPES.TOTALS:
-      return { extraDiscountPercent: 0, extraTaxPercent: 0, showBreakdown: true, totalColumns: [], extraLines: [] };
+      return { extraDiscountPercent: 0, extraTaxPercent: 0, showBreakdown: true, totalColumns: [], extraLines: [], formulaLines: [] };
     case ELEMENT_TYPES.CHART:
       return {
         title: 'Spend by Category',

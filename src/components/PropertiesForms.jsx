@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getProductColumnDefinitions, getOrderInfoColumnDefinitions } from '../data/apiClient';
-import { formatCurrency } from '../utils/calculations';
+import { formatCurrency, FORMULA_PRODUCT_FIELDS, FORMULA_TOTAL_FIELDS } from '../utils/calculations';
 import { QUERYABLE_FIELDS, NUMERIC_FIELDS, OPERATORS, AGGREGATIONS, fieldType } from '../utils/query';
 import { makeStyleSetter, FONT_SIZES } from '../utils/textStyle';
 import { TextField } from './TextField';
@@ -575,10 +575,22 @@ export function ProductTableForm({ elementData, onChange, products, currencySymb
   );
 }
 
+const FORMULA_OPERATORS = [
+  { key: '+', label: '+' },
+  { key: '-', label: '−' },
+  { key: '*', label: '×' },
+  { key: '/', label: '÷' },
+];
+
+function newFormulaTerm(op = '+') {
+  return { id: uuid(), op, sourceType: 'column', field: FORMULA_PRODUCT_FIELDS[0].key, constant: 0 };
+}
+
 export function TotalsForm({ data, onChange, focusedFieldId }) {
   const tableColumns = getProductColumnDefinitions().filter((c) => c.numeric);
   const totalColumns = data.totalColumns || [];
   const extraLines = data.extraLines || [];
+  const formulaLines = data.formulaLines || [];
 
   const toggleColumnTotal = (key) => {
     const next = totalColumns.includes(key) ? totalColumns.filter((k) => k !== key) : [...totalColumns, key];
@@ -589,6 +601,28 @@ export function TotalsForm({ data, onChange, focusedFieldId }) {
   const updateExtraLine = (id, patch) => onChange({ extraLines: extraLines.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
   const removeExtraLine = (id) => onChange({ extraLines: extraLines.filter((l) => l.id !== id) });
   const [openId, setOpenId] = useAccordion(focusedFieldId, extraLines);
+
+  const addFormulaLine = () =>
+    onChange({ formulaLines: [...formulaLines, { id: uuid(), label: 'New Formula', terms: [newFormulaTerm()] }] });
+  const updateFormulaLine = (id, patch) =>
+    onChange({ formulaLines: formulaLines.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
+  const removeFormulaLine = (id) => onChange({ formulaLines: formulaLines.filter((l) => l.id !== id) });
+  const addFormulaTerm = (lineId) => {
+    const line = formulaLines.find((l) => l.id === lineId);
+    if (!line) return;
+    updateFormulaLine(lineId, { terms: [...line.terms, newFormulaTerm()] });
+  };
+  const updateFormulaTerm = (lineId, termId, patch) => {
+    const line = formulaLines.find((l) => l.id === lineId);
+    if (!line) return;
+    updateFormulaLine(lineId, { terms: line.terms.map((t) => (t.id === termId ? { ...t, ...patch } : t)) });
+  };
+  const removeFormulaTerm = (lineId, termId) => {
+    const line = formulaLines.find((l) => l.id === lineId);
+    if (!line) return;
+    updateFormulaLine(lineId, { terms: line.terms.filter((t) => t.id !== termId) });
+  };
+  const [openFormulaId, setOpenFormulaId] = useAccordion(focusedFieldId, formulaLines);
 
   return (
     <div className="pf">
@@ -636,6 +670,81 @@ export function TotalsForm({ data, onChange, focusedFieldId }) {
         ))}
       </div>
       {!openId && <button type="button" className="pf-add-btn" onClick={addExtraLine}>+ Add charge</button>}
+
+      <div className="pf-section-title">Formulas</div>
+      <p className="pf-hint">Build a custom total from any combination of fields — e.g. Total Qty × Total Unit Price, or Grand Total − Total Discount Amt.</p>
+      <div className="pf-product-list">
+        {formulaLines.map((line) => (
+          <AccordionRow
+            key={line.id}
+            id={line.id}
+            focusedFieldId={focusedFieldId}
+            openId={openFormulaId}
+            onToggle={setOpenFormulaId}
+            title={line.label || 'New formula'}
+            onRemove={() => removeFormulaLine(line.id)}
+            removeTitle="Remove formula"
+            addLabel="+ Add formula"
+            onAdd={addFormulaLine}
+          >
+            <Field label="Label" value={line.label} onChange={(v) => updateFormulaLine(line.id, { label: v })} />
+            {line.terms.map((term, i) => {
+              const fieldOptions = term.sourceType === 'total' ? FORMULA_TOTAL_FIELDS : FORMULA_PRODUCT_FIELDS;
+              return (
+                <div className="pf-formula-term" key={term.id}>
+                  {i > 0 && (
+                    <select
+                      className="pf-input pf-formula-op"
+                      value={term.op}
+                      onChange={(e) => updateFormulaTerm(line.id, term.id, { op: e.target.value })}
+                    >
+                      {FORMULA_OPERATORS.map((op) => (
+                        <option key={op.key} value={op.key}>{op.label}</option>
+                      ))}
+                    </select>
+                  )}
+                  <select
+                    className="pf-input"
+                    value={term.sourceType}
+                    onChange={(e) => {
+                      const sourceType = e.target.value;
+                      const field = sourceType === 'total' ? FORMULA_TOTAL_FIELDS[0].key : FORMULA_PRODUCT_FIELDS[0].key;
+                      updateFormulaTerm(line.id, term.id, { sourceType, field });
+                    }}
+                  >
+                    <option value="column">Product column (sum)</option>
+                    <option value="total">Computed total</option>
+                    <option value="constant">Number</option>
+                  </select>
+                  {term.sourceType === 'constant' ? (
+                    <input
+                      className="pf-input"
+                      type="number"
+                      value={term.constant ?? 0}
+                      onChange={(e) => updateFormulaTerm(line.id, term.id, { constant: Number(e.target.value) })}
+                    />
+                  ) : (
+                    <select
+                      className="pf-input"
+                      value={term.field}
+                      onChange={(e) => updateFormulaTerm(line.id, term.id, { field: e.target.value })}
+                    >
+                      {fieldOptions.map((f) => (
+                        <option key={f.key} value={f.key}>{f.label}</option>
+                      ))}
+                    </select>
+                  )}
+                  {line.terms.length > 1 && (
+                    <button type="button" className="pf-icon-btn" onClick={() => removeFormulaTerm(line.id, term.id)}>✕</button>
+                  )}
+                </div>
+              );
+            })}
+            <button type="button" className="pf-add-btn" onClick={() => addFormulaTerm(line.id)}>+ Add term</button>
+          </AccordionRow>
+        ))}
+      </div>
+      {!openFormulaId && <button type="button" className="pf-add-btn" onClick={addFormulaLine}>+ Add formula</button>}
     </div>
   );
 }

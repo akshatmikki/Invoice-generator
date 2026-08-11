@@ -1143,6 +1143,23 @@ tr.el-field--clickable:hover td {
   overflow-y: auto;
 }
 
+.pf-formula-term {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.pf-formula-term .pf-input {
+  flex: 1 1 100px;
+  min-width: 0;
+}
+
+.pf-formula-term .pf-formula-op {
+  flex: 0 0 48px;
+}
+
 .pf-product {
   background: var(--ink-800);
   border: 1px solid var(--ink-700);
