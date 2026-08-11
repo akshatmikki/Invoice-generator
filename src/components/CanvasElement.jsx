@@ -26,6 +26,8 @@ export function CanvasElement({ element, pageElements }) {
     bringToFront,
     apiData,
     pageSettings,
+    predefinedTotals,
+    totalsPipeline,
   } = useDesigner();
 
   const isSelected = selectedElementId === element.instanceId;
@@ -144,7 +146,7 @@ export function CanvasElement({ element, pageElements }) {
       </div>
 
       <div className="canvas-el__body" style={element.height ? { overflow: 'auto' } : undefined}>
-        {renderElement(element, { onChange, apiData, elements: pageElements, onFocusField })}
+        {renderElement(element, { onChange, apiData, elements: pageElements, onFocusField, predefinedTotals, totalsPipeline })}
       </div>
 
       <div
@@ -177,7 +179,7 @@ export function CanvasElement({ element, pageElements }) {
   );
 }
 
-function renderElement(element, { onChange, apiData, elements, onFocusField }) {
+function renderElement(element, { onChange, apiData, elements, onFocusField, predefinedTotals, totalsPipeline }) {
   const { type, data, instanceId } = element;
   const currencySymbol = apiData?.invoiceMeta?.currencySymbol ?? '₹';
   const currencyDecimals = apiData?.invoiceMeta?.currencyDecimals ?? 2;
@@ -222,6 +224,8 @@ function renderElement(element, { onChange, apiData, elements, onFocusField }) {
           data={data}
           products={apiData?.products || []}
           selectedProductIds={selectedProductIds}
+          predefinedTotals={predefinedTotals}
+          totalsPipeline={totalsPipeline}
           currencySymbol={currencySymbol}
           currencyDecimals={currencyDecimals}
           onFieldClick={onFocusField}

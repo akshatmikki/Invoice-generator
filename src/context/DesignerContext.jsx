@@ -1,8 +1,9 @@
 import { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { v4 as uuid } from 'uuid';
 import { fetchAllInvoiceData } from '../data/apiClient';
-import { createDefaultElementData, defaultWidthFor, defaultHeightFor } from '../data/elementDefinitions';
+import { createDefaultElementData, defaultWidthFor, defaultHeightFor, ELEMENT_TYPES } from '../data/elementDefinitions';
 import { createDefaultTemplateElements } from '../data/defaultTemplate';
+import { createDefaultPredefinedTotals, createDefaultTotalsPipeline, newFormulaTerm } from '../utils/calculations';
 
 const DesignerContext = createContext(null);
 
@@ -61,6 +62,12 @@ const initialState = {
   // Ship To row) so the Properties panel can scroll to and highlight that exact field's row.
   focusedFieldId: null,
   pageSettings: { preset: 'A4', width: PAGE_WIDTH, height: PAGE_HEIGHT, background: '' },
+  // Predefined Totals-column formulas, shared by every Totals block on the document (see
+  // createDefaultPredefinedTotals for why this lives here instead of per-block element data).
+  predefinedTotals: createDefaultPredefinedTotals(),
+  // The invoice-level calculation pipeline (Taxable Value -> ... -> Invoice Total), also shared
+  // across every Totals block — see createDefaultTotalsPipeline.
+  totalsPipeline: createDefaultTotalsPipeline(),
 };
 
 /** Applies `updater` to whichever page contains instanceId (elements ids are unique across the whole document). */
@@ -232,6 +239,45 @@ function reducer(state, action) {
 
     case 'UPDATE_PAGE_SETTINGS':
       return { ...state, pageSettings: { ...state.pageSettings, ...action.payload } };
+
+    case 'ADD_PREDEFINED_TOTAL':
+      return {
+        ...state,
+        predefinedTotals: [
+          ...state.predefinedTotals,
+          { id: uuid(), key: null, label: 'New Total', isCurrency: true, terms: [newFormulaTerm()] },
+        ],
+      };
+
+    case 'UPDATE_PREDEFINED_TOTAL': {
+      const { id, patch } = action.payload;
+      return {
+        ...state,
+        predefinedTotals: state.predefinedTotals.map((d) => (d.id === id ? { ...d, ...patch } : d)),
+      };
+    }
+
+    case 'UPDATE_TOTALS_PIPELINE_STAGE': {
+      const { stageId, terms } = action.payload;
+      return { ...state, totalsPipeline: { ...state.totalsPipeline, [stageId]: terms } };
+    }
+
+    case 'REMOVE_PREDEFINED_TOTAL': {
+      const { id } = action.payload;
+      return {
+        ...state,
+        predefinedTotals: state.predefinedTotals.filter((d) => d.id !== id),
+        // Also drop it from every Totals block that had it toggled on, so no stale id lingers.
+        pages: state.pages.map((page) => ({
+          ...page,
+          elements: page.elements.map((el) =>
+            el.type === ELEMENT_TYPES.TOTALS
+              ? { ...el, data: { ...el.data, totalColumns: (el.data.totalColumns || []).filter((k) => k !== id) } }
+              : el
+          ),
+        })),
+      };
+    }
 
     case 'ADD_ELEMENT': {
       const { elementType, zone, x, y, pageId } = action.payload;
@@ -413,6 +459,11 @@ export function DesignerProvider({ children }) {
 
   const updatePageSettings = useCallback((patch) => dispatch({ type: 'UPDATE_PAGE_SETTINGS', payload: patch }), []);
 
+  const addPredefinedTotal = useCallback(() => dispatch({ type: 'ADD_PREDEFINED_TOTAL' }), []);
+  const updatePredefinedTotal = useCallback((id, patch) => dispatch({ type: 'UPDATE_PREDEFINED_TOTAL', payload: { id, patch } }), []);
+  const removePredefinedTotal = useCallback((id) => dispatch({ type: 'REMOVE_PREDEFINED_TOTAL', payload: { id } }), []);
+  const updateTotalsPipelineStage = useCallback((stageId, terms) => dispatch({ type: 'UPDATE_TOTALS_PIPELINE_STAGE', payload: { stageId, terms } }), []);
+
   const updateElementData = useCallback((instanceId, patch) => {
     dispatch({ type: 'UPDATE_ELEMENT_DATA', payload: { instanceId, patch } });
   }, []);
@@ -478,6 +529,10 @@ export function DesignerProvider({ children }) {
     resizeElement,
     resizeElementHeight,
     updatePageSettings,
+    addPredefinedTotal,
+    updatePredefinedTotal,
+    removePredefinedTotal,
+    updateTotalsPipelineStage,
     updateElementData,
     selectElement,
     focusField,

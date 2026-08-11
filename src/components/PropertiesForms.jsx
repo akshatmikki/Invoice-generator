@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { getProductColumnDefinitions, getOrderInfoColumnDefinitions } from '../data/apiClient';
-import { formatCurrency, FORMULA_PRODUCT_FIELDS, FORMULA_TOTAL_FIELDS } from '../utils/calculations';
+import {
+  formatCurrency,
+  FORMULA_PRODUCT_FIELDS,
+  FORMULA_TOTAL_FIELDS,
+  newFormulaTerm,
+  TOTALS_PIPELINE_STAGES,
+  TOTALS_PIPELINE_EXTRA_FIELD_LABELS,
+} from '../utils/calculations';
 import { QUERYABLE_FIELDS, NUMERIC_FIELDS, OPERATORS, AGGREGATIONS, fieldType } from '../utils/query';
 import { makeStyleSetter, FONT_SIZES } from '../utils/textStyle';
 import { TextField } from './TextField';
@@ -582,20 +589,98 @@ const FORMULA_OPERATORS = [
   { key: '/', label: '÷' },
 ];
 
-function newFormulaTerm(op = '+') {
-  return { id: uuid(), op, sourceType: 'column', field: FORMULA_PRODUCT_FIELDS[0].key, constant: 0 };
+/**
+ * Renders one formula's chain of terms — shared by ad-hoc Totals formulas, predefined-total defs,
+ * and core-calculation pipeline stages. `totalFieldOptions` lets a caller restrict which "Computed
+ * total" fields are selectable (e.g. a pipeline stage may only reference stages that already ran).
+ */
+function FormulaTermsEditor({ terms, onAddTerm, onUpdateTerm, onRemoveTerm, totalFieldOptions = FORMULA_TOTAL_FIELDS }) {
+  return (
+    <>
+      {terms.map((term, i) => {
+        const fieldOptions = term.sourceType === 'total' ? totalFieldOptions : FORMULA_PRODUCT_FIELDS;
+        return (
+          <div className="pf-formula-term" key={term.id}>
+            {i > 0 && (
+              <select
+                className="pf-input pf-formula-op"
+                value={term.op}
+                onChange={(e) => onUpdateTerm(term.id, { op: e.target.value })}
+              >
+                {FORMULA_OPERATORS.map((op) => (
+                  <option key={op.key} value={op.key}>{op.label}</option>
+                ))}
+              </select>
+            )}
+            <select
+              className="pf-input"
+              value={term.sourceType}
+              onChange={(e) => {
+                const sourceType = e.target.value;
+                const field = sourceType === 'total' ? totalFieldOptions[0]?.key : FORMULA_PRODUCT_FIELDS[0].key;
+                onUpdateTerm(term.id, { sourceType, field });
+              }}
+            >
+              <option value="column">Product column (sum)</option>
+              {totalFieldOptions.length > 0 && <option value="total">Computed total</option>}
+              <option value="constant">Number</option>
+            </select>
+            {term.sourceType === 'constant' ? (
+              <input
+                className="pf-input"
+                type="number"
+                value={term.constant ?? 0}
+                onChange={(e) => onUpdateTerm(term.id, { constant: Number(e.target.value) })}
+              />
+            ) : (
+              <select
+                className="pf-input"
+                value={term.field}
+                onChange={(e) => onUpdateTerm(term.id, { field: e.target.value })}
+              >
+                {fieldOptions.map((f) => (
+                  <option key={f.key} value={f.key}>{f.label}</option>
+                ))}
+              </select>
+            )}
+            {terms.length > 1 && (
+              <button type="button" className="pf-icon-btn" onClick={() => onRemoveTerm(term.id)}>✕</button>
+            )}
+          </div>
+        );
+      })}
+      <button type="button" className="pf-add-btn" onClick={onAddTerm}>+ Add term</button>
+    </>
+  );
 }
 
-export function TotalsForm({ data, onChange, focusedFieldId }) {
-  const tableColumns = getProductColumnDefinitions().filter((c) => c.numeric);
+/** "Computed total" dropdown options for one pipeline stage — only stages that already ran, per stage.availableTotalFields. */
+function pipelineTotalFieldOptions(stage) {
+  const labelsById = Object.fromEntries(TOTALS_PIPELINE_STAGES.map((s) => [s.id, s.label]));
+  return stage.availableTotalFields.map((key) => ({ key, label: labelsById[key] || TOTALS_PIPELINE_EXTRA_FIELD_LABELS[key] || key }));
+}
+
+export function TotalsForm({
+  data,
+  onChange,
+  focusedFieldId,
+  predefinedTotals,
+  onAddPredefinedTotal,
+  onUpdatePredefinedTotal,
+  onRemovePredefinedTotal,
+  totalsPipeline,
+  onUpdateTotalsPipelineStage,
+}) {
   const totalColumns = data.totalColumns || [];
   const extraLines = data.extraLines || [];
   const formulaLines = data.formulaLines || [];
 
-  const toggleColumnTotal = (key) => {
-    const next = totalColumns.includes(key) ? totalColumns.filter((k) => k !== key) : [...totalColumns, key];
+  const toggleColumnTotal = (id) => {
+    const next = totalColumns.includes(id) ? totalColumns.filter((k) => k !== id) : [...totalColumns, id];
     onChange({ totalColumns: next });
   };
+  const [openPredefinedId, setOpenPredefinedId] = useAccordion(focusedFieldId, predefinedTotals);
+  const [openPipelineId, setOpenPipelineId] = useAccordion(focusedFieldId, TOTALS_PIPELINE_STAGES);
 
   const addExtraLine = () => onChange({ extraLines: [...extraLines, { id: uuid(), label: 'New Charge', amount: 0 }] });
   const updateExtraLine = (id, patch) => onChange({ extraLines: extraLines.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
@@ -633,20 +718,88 @@ export function TotalsForm({ data, onChange, focusedFieldId }) {
         Show full breakdown
       </label>
 
-      <div className="pf-section-title">Also total these columns</div>
-      <div className="pf-chips">
-        {tableColumns.map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            className={`chip ${totalColumns.includes(c.key) ? 'chip--active' : ''}`}
-            onClick={() => toggleColumnTotal(c.key)}
+      <div className="pf-section-title">Core calculation</div>
+      <p className="pf-hint">
+        How Taxable Value, discounts, tax, and the Invoice Total are worked out — shared across every Totals block in the
+        document. Editing a stage here changes the real total, not just a display row.
+      </p>
+      <div className="pf-product-list">
+        {TOTALS_PIPELINE_STAGES.map((stage) => {
+          const terms = totalsPipeline?.[stage.id] || [];
+          const totalFieldOptions = pipelineTotalFieldOptions(stage);
+          return (
+            <AccordionRow
+              key={stage.id}
+              id={stage.id}
+              focusedFieldId={focusedFieldId}
+              openId={openPipelineId}
+              onToggle={setOpenPipelineId}
+              title={stage.label}
+            >
+              <FormulaTermsEditor
+                terms={terms}
+                totalFieldOptions={totalFieldOptions}
+                onAddTerm={() => onUpdateTotalsPipelineStage(stage.id, [...terms, newFormulaTerm()])}
+                onUpdateTerm={(termId, patch) =>
+                  onUpdateTotalsPipelineStage(stage.id, terms.map((t) => (t.id === termId ? { ...t, ...patch } : t)))
+                }
+                onRemoveTerm={(termId) => onUpdateTotalsPipelineStage(stage.id, terms.filter((t) => t.id !== termId))}
+              />
+            </AccordionRow>
+          );
+        })}
+      </div>
+
+      <div className="pf-section-title">Predefined totals</div>
+      <p className="pf-hint">
+        Tick to show on this Totals block. Open one to edit its formula — since these are shared, changes apply to every
+        Totals block. Tip: you can also drag a numeric column heading straight from the Product Table onto the Totals
+        block on the page to tick it on.
+      </p>
+      <div className="pf-product-list">
+        {(predefinedTotals || []).map((def) => (
+          <AccordionRow
+            key={def.id}
+            id={def.id}
+            focusedFieldId={focusedFieldId}
+            openId={openPredefinedId}
+            onToggle={setOpenPredefinedId}
+            title={def.label || 'New total'}
+            headerExtra={
+              <input
+                type="checkbox"
+                checked={totalColumns.includes(def.id)}
+                onChange={() => toggleColumnTotal(def.id)}
+                onClick={(e) => e.stopPropagation()}
+                title="Show on this Totals block"
+              />
+            }
+            onRemove={() => onRemovePredefinedTotal(def.id)}
+            removeTitle="Delete this predefined total (removes it from every Totals block)"
+            addLabel="+ Add predefined total"
+            onAdd={onAddPredefinedTotal}
           >
-            {c.label}
-          </button>
+            <Field label="Label" value={def.label} onChange={(v) => onUpdatePredefinedTotal(def.id, { label: v })} />
+            <label className="pf-checkbox">
+              <input
+                type="checkbox"
+                checked={!!def.isCurrency}
+                onChange={(e) => onUpdatePredefinedTotal(def.id, { isCurrency: e.target.checked })}
+              />
+              Format as currency
+            </label>
+            <FormulaTermsEditor
+              terms={def.terms}
+              onAddTerm={() => onUpdatePredefinedTotal(def.id, { terms: [...def.terms, newFormulaTerm()] })}
+              onUpdateTerm={(termId, patch) =>
+                onUpdatePredefinedTotal(def.id, { terms: def.terms.map((t) => (t.id === termId ? { ...t, ...patch } : t)) })
+              }
+              onRemoveTerm={(termId) => onUpdatePredefinedTotal(def.id, { terms: def.terms.filter((t) => t.id !== termId) })}
+            />
+          </AccordionRow>
         ))}
       </div>
-      <p className="pf-hint">Tip: you can also drag a numeric column heading straight from the Product Table onto the Totals block on the page.</p>
+      {!openPredefinedId && <button type="button" className="pf-add-btn" onClick={onAddPredefinedTotal}>+ Add predefined total</button>}
 
       <div className="pf-section-title">Extra charges</div>
       <p className="pf-hint">Freeform lines (e.g. Shipping Fee) added to the grand total.</p>
@@ -688,59 +841,12 @@ export function TotalsForm({ data, onChange, focusedFieldId }) {
             onAdd={addFormulaLine}
           >
             <Field label="Label" value={line.label} onChange={(v) => updateFormulaLine(line.id, { label: v })} />
-            {line.terms.map((term, i) => {
-              const fieldOptions = term.sourceType === 'total' ? FORMULA_TOTAL_FIELDS : FORMULA_PRODUCT_FIELDS;
-              return (
-                <div className="pf-formula-term" key={term.id}>
-                  {i > 0 && (
-                    <select
-                      className="pf-input pf-formula-op"
-                      value={term.op}
-                      onChange={(e) => updateFormulaTerm(line.id, term.id, { op: e.target.value })}
-                    >
-                      {FORMULA_OPERATORS.map((op) => (
-                        <option key={op.key} value={op.key}>{op.label}</option>
-                      ))}
-                    </select>
-                  )}
-                  <select
-                    className="pf-input"
-                    value={term.sourceType}
-                    onChange={(e) => {
-                      const sourceType = e.target.value;
-                      const field = sourceType === 'total' ? FORMULA_TOTAL_FIELDS[0].key : FORMULA_PRODUCT_FIELDS[0].key;
-                      updateFormulaTerm(line.id, term.id, { sourceType, field });
-                    }}
-                  >
-                    <option value="column">Product column (sum)</option>
-                    <option value="total">Computed total</option>
-                    <option value="constant">Number</option>
-                  </select>
-                  {term.sourceType === 'constant' ? (
-                    <input
-                      className="pf-input"
-                      type="number"
-                      value={term.constant ?? 0}
-                      onChange={(e) => updateFormulaTerm(line.id, term.id, { constant: Number(e.target.value) })}
-                    />
-                  ) : (
-                    <select
-                      className="pf-input"
-                      value={term.field}
-                      onChange={(e) => updateFormulaTerm(line.id, term.id, { field: e.target.value })}
-                    >
-                      {fieldOptions.map((f) => (
-                        <option key={f.key} value={f.key}>{f.label}</option>
-                      ))}
-                    </select>
-                  )}
-                  {line.terms.length > 1 && (
-                    <button type="button" className="pf-icon-btn" onClick={() => removeFormulaTerm(line.id, term.id)}>✕</button>
-                  )}
-                </div>
-              );
-            })}
-            <button type="button" className="pf-add-btn" onClick={() => addFormulaTerm(line.id)}>+ Add term</button>
+            <FormulaTermsEditor
+              terms={line.terms}
+              onAddTerm={() => addFormulaTerm(line.id)}
+              onUpdateTerm={(termId, patch) => updateFormulaTerm(line.id, termId, patch)}
+              onRemoveTerm={(termId) => removeFormulaTerm(line.id, termId)}
+            />
           </AccordionRow>
         ))}
       </div>

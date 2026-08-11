@@ -1,18 +1,8 @@
 import { useDroppable } from '@dnd-kit/core';
-import { computeInvoiceTotals, formatCurrency, sumColumn, percentOf, evaluateFormula } from '../../utils/calculations';
+import { computeInvoiceTotals, formatCurrency, percentOf, evaluateFormula } from '../../utils/calculations';
 
-// Which table columns can have a "column total" row shown, and how to compute + label each.
-// (SKU/Item/Description/Category are text, so they're excluded — only numeric columns make sense to total.)
-const COLUMN_TOTAL_DEFS = [
-  { key: 'qty', label: 'Total Qty', compute: (items) => sumColumn(items, 'qty'), isCurrency: false },
-  { key: 'unitPrice', label: 'Total Unit Price', compute: (items) => sumColumn(items, 'unitPrice'), isCurrency: true },
-  { key: 'discountPercent', label: 'Total Discount Amt', compute: (items) => sumColumn(items, 'discountAmt'), isCurrency: true },
-  { key: 'taxPercent', label: 'Total Tax Amt', compute: (items) => sumColumn(items, 'taxAmt'), isCurrency: true },
-  { key: 'lineTotal', label: 'Total Line Total', compute: (items) => sumColumn(items, 'lineTotal'), isCurrency: true },
-];
-
-export function TotalsElement({ instanceId, data, products, selectedProductIds, currencySymbol, currencyDecimals = 2, onFieldClick }) {
-  const totals = computeInvoiceTotals(products, selectedProductIds, data.extraDiscountPercent, data.extraTaxPercent, data.extraLines);
+export function TotalsElement({ instanceId, data, products, selectedProductIds, predefinedTotals, totalsPipeline, currencySymbol, currencyDecimals = 2, onFieldClick }) {
+  const totals = computeInvoiceTotals(products, selectedProductIds, data.extraDiscountPercent, data.extraTaxPercent, data.extraLines, totalsPipeline);
   const hasProducts = selectedProductIds.length > 0;
   const totalColumns = data.totalColumns || [];
   const extraLines = data.extraLines || [];
@@ -81,12 +71,12 @@ export function TotalsElement({ instanceId, data, products, selectedProductIds, 
               )}
 
               {totalColumns.length > 0 && <div className="totals-divider" />}
-              {totalColumns.map((key) => {
-                const def = COLUMN_TOTAL_DEFS.find((d) => d.key === key);
+              {totalColumns.map((id) => {
+                const def = (predefinedTotals || []).find((d) => d.id === id);
                 if (!def) return null;
-                const value = def.compute(totals.items);
+                const value = evaluateFormula(def.terms, totals.items, totals);
                 return (
-                  <div className="totals-row totals-row--column" key={key}>
+                  <div className="totals-row totals-row--column" key={id}>
                     <span>{def.label}</span>
                     <span className="num">{def.isCurrency ? formatCurrency(value, currencySymbol, currencyDecimals) : value}</span>
                   </div>

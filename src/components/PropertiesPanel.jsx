@@ -25,6 +25,12 @@ export function PropertiesPanel() {
     apiData,
     pageSettings,
     updatePageSettings,
+    predefinedTotals,
+    addPredefinedTotal,
+    updatePredefinedTotal,
+    removePredefinedTotal,
+    totalsPipeline,
+    updateTotalsPipelineStage,
     updateInfoBlockTitle,
     addInfoItem,
     updateInfoItem,
@@ -145,7 +151,19 @@ export function PropertiesPanel() {
             sourceRecords={apiData?.productSourceRecords || []}
           />
         )}
-        {element.type === ELEMENT_TYPES.TOTALS && <TotalsForm data={element.data} onChange={onChange} focusedFieldId={focusedFieldId} />}
+        {element.type === ELEMENT_TYPES.TOTALS && (
+          <TotalsForm
+            data={element.data}
+            onChange={onChange}
+            focusedFieldId={focusedFieldId}
+            predefinedTotals={predefinedTotals}
+            onAddPredefinedTotal={addPredefinedTotal}
+            onUpdatePredefinedTotal={updatePredefinedTotal}
+            onRemovePredefinedTotal={removePredefinedTotal}
+            totalsPipeline={totalsPipeline}
+            onUpdateTotalsPipelineStage={updateTotalsPipelineStage}
+          />
+        )}
         {element.type === ELEMENT_TYPES.CHART && <ChartForm data={element.data} onChange={onChange} />}
         {element.type === ELEMENT_TYPES.SHAPE && <ShapeForm data={element.data} onChange={onChange} />}
       </div>
