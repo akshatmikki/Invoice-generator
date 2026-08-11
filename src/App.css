@@ -1139,8 +1139,6 @@ tr.el-field--clickable:hover td {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 360px;
-  overflow-y: auto;
 }
 
 .pf-formula-term {

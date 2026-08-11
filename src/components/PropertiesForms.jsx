@@ -447,8 +447,14 @@ const TABLE_STYLE_DEFAULTS = {
   fontSize: 12.5,
 };
 
+// Freight/logistics metadata — not used by the qty/rate/discount/tax math, so only worth showing
+// in a line item's edit form when its column is actually turned on in "Columns shown" below.
+// (Keeps the common case — a plain tax invoice with none of these — as short as the other sections.)
+const SECONDARY_PRODUCT_FIELD_KEYS = ['sku', 'category', 'weight', 'weightUnit', 'valueOfGoods', 'equipmentType'];
+
 export function ProductTableForm({ elementData, onChange, products, currencySymbol, currencyDecimals, onUpdateProduct, onAddProduct, onRemoveProduct, focusedFieldId, sourceRecords }) {
   const columnDefs = getProductColumnDefinitions();
+  const visibleSecondaryFields = columnDefs.filter((c) => SECONDARY_PRODUCT_FIELD_KEYS.includes(c.key) && elementData.visibleColumns.includes(c.key));
   const tableStyle = elementData.tableStyle || {};
   const setTableStyle = (patch) => onChange({ tableStyle: { ...tableStyle, ...patch } });
 
@@ -506,16 +512,25 @@ export function ProductTableForm({ elementData, onChange, products, currencySymb
                 <Field label="Discount %" type="number" value={p.discountPercent} onChange={(v) => onUpdateProduct(p.id, { discountPercent: v })} />
                 <Field label="VAT %" type="number" value={p.taxPercent} onChange={(v) => onUpdateProduct(p.id, { taxPercent: v })} />
               </div>
-              <div className="pf-product__grid">
-                <Field label="Weight" type="number" value={p.weight} onChange={(v) => onUpdateProduct(p.id, { weight: v })} />
-                <Field label="Weight Unit" value={p.weightUnit} onChange={(v) => onUpdateProduct(p.id, { weightUnit: v })} />
-                <Field label="Value of Goods" type="number" value={p.valueOfGoods} onChange={(v) => onUpdateProduct(p.id, { valueOfGoods: v })} />
-                <Field label="Equipment Type" value={p.equipmentType} onChange={(v) => onUpdateProduct(p.id, { equipmentType: v })} />
-              </div>
-              <label className="pf-checkbox">
-                <input type="checkbox" checked={!!p.hazmat} onChange={(e) => onUpdateProduct(p.id, { hazmat: e.target.checked })} />
-                Hazmat
-              </label>
+              {visibleSecondaryFields.length > 0 && (
+                <div className="pf-product__grid">
+                  {visibleSecondaryFields.map((c) => (
+                    <Field
+                      key={c.key}
+                      label={c.label}
+                      type={c.numeric ? 'number' : 'text'}
+                      value={p[c.key]}
+                      onChange={(v) => onUpdateProduct(p.id, { [c.key]: v })}
+                    />
+                  ))}
+                </div>
+              )}
+              {elementData.visibleColumns.includes('hazmat') && (
+                <label className="pf-checkbox">
+                  <input type="checkbox" checked={!!p.hazmat} onChange={(e) => onUpdateProduct(p.id, { hazmat: e.target.checked })} />
+                  Hazmat
+                </label>
+              )}
               <div className="pf-product__amount">{formatCurrency(p.qty * p.unitPrice, currencySymbol, currencyDecimals)}</div>
             </AccordionRow>
           );
